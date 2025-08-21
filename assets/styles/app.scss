@@ -1,4 +1,9 @@
 
 @use 'layout/home';
+@use 'layout/header';
+@use 'layout/register';
+@use 'layout/connexion';
 
 @use "base/global";
+
+@use 'components/navbars';

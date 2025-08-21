@@ -1,0 +1,131 @@
+/* assets/styles/components/navbar.scss */
+@use '../base/variables' as v;
+
+.navbar {
+  position: sticky; top: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem;
+  padding: .7rem 1.2rem;
+  isolation: isolate;
+
+  /* fond pastel + glass */
+  background: linear-gradient(180deg, rgba(v.$color-accent,.22), rgba(v.$color-primary,.18));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 8px 26px rgba(0,0,0,.20);
+
+  /* ⭐ nappes d'étoiles derrière la navbar */
+  &::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(2px 2px at 12% 30%, rgba(255,255,255,.9), transparent 60%),
+      radial-gradient(2px 2px at 38% 70%, rgba(v.$color-accent,.9), transparent 60%),
+      radial-gradient(1.7px 1.7px at 72% 20%, rgba(v.$color-primary,.9), transparent 60%),
+      radial-gradient(1.8px 1.8px at 88% 55%, rgba(255,255,255,.8), transparent 60%),
+      radial-gradient(1.2px 1.2px at 15% 60%, rgba(255,255,255,.7), transparent 60%),
+      radial-gradient(1.2px 1.2px at 55% 35%, rgba(v.$color-primary,.7), transparent 60%),
+      radial-gradient(1.2px 1.2px at 80% 75%, rgba(v.$color-accent,.7), transparent 60%);
+    background-size: 220px 120px, 260px 150px, 240px 140px, 280px 160px,
+                     180px 100px, 200px 120px, 160px 90px;
+    background-repeat: repeat;
+    mix-blend-mode: screen;
+    animation: mg-stars-move 55s linear infinite;
+    opacity: .85;
+  }
+
+  /* ligne néon en bas */
+  &::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+    background: linear-gradient(90deg, v.$color-primary, v.$color-accent, v.$color-primary);
+    opacity: .65;
+  }
+
+  .logo img {
+    height: 42px; width: auto; display: block;
+    filter: drop-shadow(0 0 10px rgba(v.$color-primary,.35));
+    transition: transform .18s ease;
+    &:hover { transform: translateY(-1px) scale(1.02); }
+  }
+
+  .nav-links, .auth-links { display: flex; align-items: center; gap: .6rem; }
+  .auth-links form { display: contents; } /* garde le <a> déconnexion inline */
+
+  /* liens : pilules pastel + glow + mini étoiles au hover */
+  .nav-links a, .auth-links a {
+    position: relative;
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .44rem .8rem;
+    border-radius: 999px;
+    background:
+      linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.06)) padding-box,
+      linear-gradient(90deg, v.$color-primary, v.$color-accent) border-box;
+    border: 1px solid transparent;
+    color: v.$color-text; text-decoration: none; opacity: .95;
+    transition: transform .18s, box-shadow .18s, background .18s;
+
+    /* soulignement dégradé discret */
+    &::after {
+      content: ""; position: absolute; left: .8rem; right: .8rem; bottom: .32rem; height: 2px;
+      border-radius: 2px; transform: scaleX(0); transform-origin: left; transition: transform .22s ease;
+      background: linear-gradient(90deg, v.$color-primary, v.$color-accent);
+      opacity: .85;
+    }
+
+    /* ⭐ groupe d'étincelles */
+    &::before {
+      content: "✦"; position: absolute; left: .55rem; top: -.42rem;
+      font-size: .78rem; color: v.$color-accent; pointer-events: none;
+      filter: drop-shadow(0 0 6px rgba(v.$color-accent,.6));
+      opacity: 0; transform: scale(.85) rotate(-12deg);
+      transition: opacity .25s, transform .25s;
+      text-shadow:
+        10px -4px rgba(v.$color-primary,.95),
+        -12px 6px rgba(255,255,255,.95),
+        20px 4px rgba(v.$color-accent,.9);
+    }
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(v.$color-accent,.28);
+      background:
+        linear-gradient(rgba(255,255,255,.10), rgba(255,255,255,.10)) padding-box,
+        linear-gradient(90deg, v.$color-primary, v.$color-accent) border-box;
+    }
+    &:hover::after { transform: scaleX(1); }
+    &:hover::before { opacity: .95; transform: scale(1) rotate(6deg); }
+
+    /* lien actif (ajoute .is-active côté Twig) */
+    &.is-active {
+      background:
+        linear-gradient(90deg, rgba(v.$color-primary,.25), rgba(v.$color-accent,.25)) padding-box,
+        linear-gradient(90deg, v.$color-primary, v.$color-accent) border-box;
+      box-shadow: 0 12px 26px rgba(v.$color-primary,.25);
+    }
+  }
+}
+
+/* animation des étoiles */
+@keyframes mg-stars-move {
+  from { background-position:   0   0,   0   0,   0   0,   0   0,   0   0,   0   0,   0   0; }
+  to   { background-position: -180px 0, -200px 0, -160px 0, -220px 0, -140px 0, -160px 0, -120px 0; }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .navbar {
+    padding: .6rem .9rem;
+    .logo img { height: 36px; }
+    .nav-links, .auth-links { gap: .4rem; }
+    .nav-links a, .auth-links a { padding: .42rem .65rem; }
+  }
+}
+@media (max-width: 640px) {
+  .navbar {
+    flex-wrap: wrap; row-gap: .5rem;
+    .nav-links { order: 3; width: 100%; overflow-x: auto; padding-bottom: .25rem; }
+    .nav-links::-webkit-scrollbar { height: 6px; }
+    .nav-links::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 999px; }
+    .auth-links { margin-left: auto; }
+  }
+}

@@ -17,6 +17,16 @@ security:
             lazy: true
             provider: app_user_provider
 
+            form_login:
+                login_path: app_login   # GET → ta page Twig de login
+                check_path: app_login   # POST → traite le formulaire
+                enable_csrf: true
+                username_parameter: username   # <— correspond à name="username" dans ton form
+                password_parameter: password   # <— correspond à name="password"
+            logout:
+                path: app_logout
+                # where to redirect after logout
+                # target: app_any_route
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall
 
@@ -26,8 +36,8 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/profile, roles: ROLE_USER }
 
 when@test:
     security:

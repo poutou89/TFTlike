@@ -2,10 +2,11 @@
 
 namespace App\Entity;
 
-use App\Repository\HeroRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
+use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\HeroRepository;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: HeroRepository::class)]
 class Hero
@@ -19,18 +20,23 @@ class Hero
     private ?string $nom = null;
 
     #[ORM\Column]
+    #[Assert\Range(min: 0, max: 100)]
     private ?int $pdv = null;
 
     #[ORM\Column]
+    #[Assert\Range(min: 0, max: 100)]
     private ?int $atk = null;
 
     #[ORM\Column]
+    #[Assert\Range(min: 0, max: 100)]
     private ?int $mana = null;
 
     #[ORM\Column]
+    #[Assert\Range(min: 0, max: 100)]
     private ?int $shield = null;
 
     #[ORM\Column]
+    #[Assert\Range(min: 0, max: 100)]
     private ?int $chance_atk = null;
 
     #[ORM\Column(length: 255)]
@@ -47,6 +53,15 @@ class Hero
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $family = null;
+
+    #[ORM\ManyToOne(inversedBy: 'hero_id')]
+    private ?Family $family_id = null;
+
+    #[ORM\Column]
+    private ?int $chance_crit = null;
+
+    #[ORM\Column]
+    private ?int $chance_esq = null;
 
     public function __construct()
     {
@@ -189,6 +204,42 @@ class Hero
     public function setFamily(?string $family): static
     {
         $this->family = $family;
+
+        return $this;
+    }
+
+    public function getFamilyId(): ?Family
+    {
+        return $this->family_id;
+    }
+
+    public function setFamilyId(?Family $family_id): static
+    {
+        $this->family_id = $family_id;
+
+        return $this;
+    }
+
+    public function getChanceCrit(): ?int
+    {
+        return $this->chance_crit;
+    }
+
+    public function setChanceCrit(int $chance_crit): static
+    {
+        $this->chance_crit = $chance_crit;
+
+        return $this;
+    }
+
+    public function getChanceEsq(): ?int
+    {
+        return $this->chance_esq;
+    }
+
+    public function setChanceEsq(int $chance_esq): static
+    {
+        $this->chance_esq = $chance_esq;
 
         return $this;
     }

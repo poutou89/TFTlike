@@ -14,27 +14,30 @@
         {% endblock %}
     </head>
     <body>
-        
         {% block header %}
             <header>
                 {% block navbar %}
-
                     <nav class="navbar">
+                        <div class="logo">
+                            <img src="{{asset('/images/backgrounds/logo.png')}}" alt="">
+                        </div>
+                        
                         <nav class="nav-links">
                             <a href="{{ path('app_home') }}">Accueil</a>
-                            <a href="{{ path('app_custom_login') }}">Connexion</a>
                         </nav>
 
-                    <div class="auth-links">
-                        {% if app.user %}
-                            <form action="{{ path('app_logout') }}" method="post">
-                                <a href="{{ path('app_logout') }}">🚪 Déconnexion</a>
-                            </form>
-                        {% else %}
-                            <a href="{{ path('app_register') }}">Inscription</a>
-                            {# <a href="{{ path('app_Login') }}">Connexion</a> #}
-                        {% endif %}
-                    </div>
+                        <div class="auth-links">
+                            {% if app.user %}
+                                <a href="#" class="btn btn-primary">Lancer une partie</a>
+                                <form action="{{ path('app_logout') }}" method="post">
+                                    <a href="{{ path('app_logout') }}">🚪 Déconnexion</a>
+                                </form>
+                                <a href="{{ path('admin') }}">🛠 Administration</a></li>
+                            {% else %}
+                                <a href="{{ path('app_register') }}">Inscription</a>
+                                <a href="{{ path('app_login') }}">Connexion</a>
+                            {% endif %}
+                        </div>
                     </nav>
                 {% endblock %}
             </header>

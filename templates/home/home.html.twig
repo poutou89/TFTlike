@@ -1,68 +1,73 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Magical Arena — Autobattler{% endblock %}
+{% block title %}Magical Arena — Autobattler
+{% endblock %}
 {% block main %}
-<main class="home-page">
-<section class="mg-hero">
-  <div class="mg-hero__glow"></div>
-  <div class="mg-hero__content container">
-    <div class="mg-hero__text">
-      <h1 class="mg-title">Magical <span>Arena</span></h1>
-      <p class="mg-subtitle">
-        Compose ton escouade de Magical Girls, découvre des synergies étincelantes,
-        et domine l’arène en combats automatiques.
-      </p>
-      <div class="mg-cta">
-        <a  class="btn btn-primary">Jouer</a>
-        <a  class="btn btn-ghost">Guide</a>
-        <a class="btn btn-ghost">Collection</a>
-      </div>
-    </div>
-    <div class="mg-hero__art">
-      {# place un visuel PNG/SVG de magical girl ici #}
-      <img src="{{ asset('images/mg/hero_magical_girl.png') }}" alt="Magical Girl" />
-      <div class="sparkles"></div>
-    </div>
-  </div>
-</section>
+	<main class="home-page">
+		<section class="mg-hero">
+			<div class="mg-hero__glow"></div>
+			<div class="mg-hero__content container">
+				<div class="mg-hero__text">
+					<h1 class="mg-title">Magical
+						<span>Arena</span>
+					</h1>
+					<p class="mg-subtitle">
+						Compose ton escouade de Magical Girls, découvre des synergies étincelantes,
+						        et domine l’arène en combats automatiques.
+					</p>
+					<div class="mg-cta">
+						<a class="btn btn-primary">Jouer</a>
+						<a class="btn btn-ghost">Guide</a>
+						<a class="btn btn-ghost">Collection</a>
+					</div>
+				</div>
+				<div
+					class="mg-hero__art">
+					{# place un visuel PNG/SVG de magical girl ici #}
+					<img src="{{ asset('images/mg/hero_magical_girl.png') }}" alt="Magical Girl"/>
+					<div class="sparkles"></div>
+				</div>
+			</div>
+		</section>
 
-<section class="mg-features container" id="guide">
-  <div class="mg-section-header">
-    <h2>Pourquoi tu vas adorer</h2>
-    <p>Des combats automatiques, des compos, des étoiles… et des paillettes.</p>
-  </div>
-  <div class="mg-grid">
-    <article class="mg-card">
-      <h3>Draft & Étoiles</h3>
-      <p>Fusionne tes héroïnes pour gagner des niveaux d’étoiles et débloquer des ultis dévastateurs.</p>
-    </article>
-    <article class="mg-card">
-      <h3>Synergies</h3>
-      <p>Arcane, Lune, Soleil, Idole… Mixe les traits pour des bonus d’équipe enchantés.</p>
-    </article>
-    <article class="mg-card">
-      <h3>Équipement</h3>
-      <p>Loots scintillants : baguettes, familiers, rubans — chaque item change la meta.</p>
-    </article>
-    <article class="mg-card">
-      <h3>Classements</h3>
-      <p>Escalade les rangs saisonniers et obtiens des cosmétiques exclusifs.</p>
-    </article>
-  </div>
-</section>
+		<section class="mg-features container" id="guide">
+			<div class="mg-section-header">
+				<h2>Pourquoi tu vas adorer</h2>
+				<p>Des combats automatiques, des compos, des étoiles… et des paillettes.</p>
+			</div>
+			<div class="mg-grid">
+				<article class="mg-card">
+					<h3>Draft & Étoiles</h3>
+					<p>Fusionne tes héroïnes pour gagner des niveaux d’étoiles et débloquer des ultis dévastateurs.</p>
+				</article>
+				<article class="mg-card">
+					<h3>Synergies</h3>
+					<p>Arcane, Lune, Soleil, Idole… Mixe les traits pour des bonus d’équipe enchantés.</p>
+				</article>
+				<article class="mg-card">
+					<h3>Équipement</h3>
+					<p>Loots scintillants : baguettes, familiers, rubans — chaque item change la meta.</p>
+				</article>
+				<article class="mg-card">
+					<h3>Classements</h3>
+					<p>Escalade les rangs saisonniers et obtiens des cosmétiques exclusifs.</p>
+				</article>
+			</div>
+		</section>
 
-<section class="mg-roster container" id="collection">
-  <div class="mg-section-header">
-    <h2>Gardiens en vedette</h2>
-    <p>Fais défiler et découvre quelques héroïnes.</p>
-  </div>
+		<section class="mg-roster container" id="collection">
+			<div class="mg-section-header">
+				<h2>Gardiens en vedette</h2>
+				<p>Fais défiler et découvre quelques héroïnes.</p>
+			</div>
 
-  <div class="carousel">
-    <button class="carousel__nav carousel__nav--prev" aria-label="Précédent">‹</button>
+			<div class="carousel">
+				<button class="carousel__nav carousel__nav--prev" aria-label="Précédent">‹</button>
 
-    <div class="carousel__track" id="mg-roster-track">
-      {# cartes exemples — remplace les images/titres par les tiens #}
-      {% set girls = [
+				<div
+					class="carousel__track" id="mg-roster-track">
+					{# cartes exemples — remplace les images/titres par les tiens #}
+					{% set girls = [
         {name:'Astra (Arcane)', img:'images/mg/astra.png'},
         {name:'Nova (Lune)', img:'images/mg/nova.png'},
         {name:'Solaria (Soleil)', img:'images/mg/solaria.png'},
@@ -71,52 +76,52 @@
         {name:'Vesper (Ombre)', img:'images/mg/vesper.png'}
       ] %}
 
-      {% for g in girls %}
-      <div class="carousel__item">
-        <div class="mg-unit">
-          <div class="mg-unit__img">
-            <img src="{{ asset(g.img) }}" alt="{{ g.name }}">
-          </div>
-          <div class="mg-unit__meta">
-            <h4>{{ g.name }}</h4>
-            <button class="tag">Voir</button>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
+					{% for g in girls %}
+						<div class="carousel__item">
+							<div class="mg-unit">
+								<div class="mg-unit__img">
+									<img src="{{ asset(g.img) }}" alt="{{ g.name }}">
+								</div>
+								<div class="mg-unit__meta">
+									<h4>{{ g.name }}</h4>
+									<button class="tag">Voir</button>
+								</div>
+							</div>
+						</div>
+					{% endfor %}
+				</div>
 
-    <button class="carousel__nav carousel__nav--next" aria-label="Suivant">›</button>
-  </div>
-</section>
+				<button class="carousel__nav carousel__nav--next" aria-label="Suivant">›</button>
+			</div>
+		</section>
 
-<section class="mg-news container" id="play">
-  <div class="mg-section-header">
-    <h2>Actualités</h2>
-    <p>Équilibrages, nouveaux traits, événements & plus.</p>
-  </div>
+		<section class="mg-news container" id="play">
+			<div class="mg-section-header">
+				<h2>Actualités</h2>
+				<p>Équilibrages, nouveaux traits, événements & plus.</p>
+			</div>
 
-  <div class="mg-news__grid">
-    <a href="#" class="news-card">
-      <span class="news-card__badge">Patch 1.1</span>
-      <h3>Buffs Lune, nerfs Ombre</h3>
-      <p>Révision des synergies tardives et ajustement des items légendaires.</p>
-    </a>
-    <a href="#" class="news-card">
-      <span class="news-card__badge">Événement</span>
-      <h3>Festival des Idoles</h3>
-      <p>Quêtes quotidiennes, skins scintillants et emotes inédites.</p>
-    </a>
-    <a href="#" class="news-card">
-      <span class="news-card__badge">Nouveau</span>
-      <h3>Solaria rejoint l’arène</h3>
-      <p>Héroïne solaire avec ult en rayon concentré — attention aux brûlures !</p>
-    </a>
-  </div>
+			<div class="mg-news__grid">
+				<a href="#" class="news-card">
+					<span class="news-card__badge">Patch 1.1</span>
+					<h3>Buffs Lune, nerfs Ombre</h3>
+					<p>Révision des synergies tardives et ajustement des items légendaires.</p>
+				</a>
+				<a href="#" class="news-card">
+					<span class="news-card__badge">Événement</span>
+					<h3>Festival des Idoles</h3>
+					<p>Quêtes quotidiennes, skins scintillants et emotes inédites.</p>
+				</a>
+				<a href="#" class="news-card">
+					<span class="news-card__badge">Nouveau</span>
+					<h3>Solaria rejoint l’arène</h3>
+					<p>Héroïne solaire avec ult en rayon concentré — attention aux brûlures !</p>
+				</a>
+			</div>
 
-  <div class="mg-center mt-6">
-    <a href="#" class="btn btn-primary">Lancer une partie</a>
-  </div>
-</section>
-</main>
+			<div class="mg-center mt-6">
+				<a href="#" class="btn btn-primary">Lancer une partie</a>
+			</div>
+		</section>
+	</main>
 {% endblock %}
