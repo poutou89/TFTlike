@@ -2,6 +2,9 @@
 
 namespace App\Controller;
 
+use App\Entity\Team;
+use App\Repository\HeroRepository;
+use App\Repository\TeamRepository;
 use App\Entity\User;
 use App\Form\RegisterTypeForm;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,4 +42,6 @@ class RegisterController extends AbstractController
             'form' => $form->createView(),
         ]);
     }
+
+    
 }

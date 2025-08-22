@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+
+{% block title %}Politique cookies — {{ site_name|default('Votre site') }}{% endblock %}
+{% block meta_description %}Politique relative aux cookies de {{ site_name|default('Votre site') }}.{% endblock %}
+
+
+{% block main %}
+<main class="rgpd">
+<article class="prose max-w-3xl mx-auto py-8">
+<h1>Politique relative aux cookies</h1>
+<p><em>Dernière mise à jour : {{ last_update|default('now')|date('d/m/Y') }}</em></p>
+
+
+<h2>1. Qu’est-ce qu’un cookie ?</h2>
+<p>Un cookie est un fichier texte déposé sur votre terminal (ordinateur, mobile) lors de la visite d’un site, afin de stocker certaines informations.</p>
+
+
+<h2>2. Cookies utilisés sur {{ site_name|default('le site') }}</h2>
+<table>
+<thead>
+<tr><th>Type</th><th>Finalité</th><th>Exemples</th><th>Durée</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>Nécessaires</td>
+<td>Fonctionnement du site (authentification, sécurité, panier, préférence de langue).</td>
+<td>session_id, csrf_token</td>
+<td>Session / {{ retention_cookies|default('jusqu’à 13 mois') }}</td>
+</tr>
+<tr>
+<td>Mesure d’audience</td>
+<td>Statistiques d’utilisation pour améliorer le service.</td>
+<td>{{ analytics_examples|default('ex: _ga (Google Analytics), _gid') }}</td>
+<td>{{ analytics_retention|default('13 mois') }}</td>
+</tr>
+<tr>
+<td>Publicitaires (le cas échéant)</td>
+<td>Personnalisation et mesure des campagnes.</td>
+<td>{{ ads_examples|default('ex: _fbp, _gcl_au') }}</td>
+<td>{{ ads_retention|default('13 mois') }}</td>
+</tr>
+</tbody>
+</table>
+
+
+<h2>3. Consentement</h2>
+<p>Les cookies non essentiels ne sont déposés qu’avec votre consentement. Vous pouvez à tout moment modifier vos choix</a> (accepter/refuser par finalité).</p>
+
+
+<h2>4. Paramétrage navigateur</h2>
+<p>Vous pouvez également configurer votre navigateur pour bloquer ou supprimer les cookies. Le refus des cookies nécessaires peut dégrader l’expérience.</p>
+
+
+<h2>5. Délégué à la protection des données</h2>
+<p>Contact DPO : <a href="mailto:{{ dpo_email|default(contact_email|default('contact@example.com')) }}">{{ dpo_email|default(contact_email|default('contact@example.com')) }}</a>.</p>
+</article>
+</main>
+{% endblock %}

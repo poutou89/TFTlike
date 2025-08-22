@@ -1,9 +1,11 @@
 
 @use 'layout/home';
 @use 'layout/header';
+@use 'layout/footer';
 @use 'layout/register';
 @use 'layout/connexion';
-
+@use 'layout/rgpd';
+@use 'layout/team';
 @use "base/global";
 
 @use 'components/navbars';

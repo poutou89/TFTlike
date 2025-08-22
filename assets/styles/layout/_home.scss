@@ -52,6 +52,10 @@ h1, h2, h3, .mg-title {
     font-weight: 700;
   }
 
+  &.btn-down {
+    margin-bottom: 2rem;
+  }
+
   &.btn-ghost {
     background: transparent;
     border-color: v.$card-border;

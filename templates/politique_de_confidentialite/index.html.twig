@@ -1,0 +1,86 @@
+{% extends 'base.html.twig' %}
+
+
+{% block title %}Politique de confidentialité — {{ site_name|default('Votre site') }}{% endblock %}
+{% block meta_description %}Politique de confidentialité (RGPD) de {{ site_name|default('Votre site') }}.{% endblock %}
+
+
+{% block main %}
+<main class="rgpd">
+<article class="prose max-w-3xl mx-auto py-8">
+<h1>Politique de confidentialité</h1>
+<p><em>Dernière mise à jour : {{ last_update|default('now')|date('d/m/Y') }}</em></p>
+
+
+<h2>1. Responsable du traitement</h2>
+<p>
+Le site <strong>{{ site_name|default('Nom du site') }}</strong> est exploité par
+<strong>{{ company_name|default('Nom de l\'entreprise / éditeur') }}</strong>,
+{{ company_legal_form|default('forme juridique') }}, immatriculée sous le n° {{ company_registration|default('SIREN/SIRET') }},
+dont le siège social est situé {{ company_address|default('adresse complète') }}.
+Email de contact : <a href="mailto:{{ contact_email|default('contact@example.com') }}">{{ contact_email|default('contact@example.com') }}</a>.
+</p>
+
+
+<h2>2. Données collectées</h2>
+<ul>
+<li><strong>Données de compte</strong> : email, pseudonyme, mot de passe (haché).</li>
+<li><strong>Données de jeu</strong> : équipes, héros, résultats, classements, historique de matchs.</li>
+<li><strong>Données techniques</strong> : adresse IP, identifiants de session, logs, cookies nécessaires.</li>
+<li><strong>Optionnel</strong> : analytics, crash reports, newsletter (avec consentement).</li>
+</ul>
+
+
+<h2>3. Finalités et bases légales</h2>
+<ul>
+<li><strong>Fourniture du service</strong> (création de compte, matchmaking, sauvegarde) — Base légale : exécution du contrat.</li>
+<li><strong>Sécurité et prévention de la fraude/triche</strong> — Intérêt légitime.</li>
+<li><strong>Amélioration du produit et statistiques</strong> — Intérêt légitime ou consentement pour analytics.</li>
+<li><strong>Communication (newsletter)</strong> — Consentement.</li>
+<li><strong>Obligations légales</strong> — Obligation légale.</li>
+</ul>
+
+
+<h2>4. Destinataires</h2>
+<p>Vos données sont destinées aux équipes internes de {{ company_name|default('l\'éditeur') }} et à nos sous-traitants strictement nécessaires :</p>
+<ul>
+<li><strong>Hébergeur</strong> : {{ host_name|default('Nom de l\'hébergeur') }}, {{ host_country|default('pays') }}.</li>
+<li><strong>Fournisseurs techniques</strong> (e-mail, analytics, monitoring) : {{ vendors_list|default('à compléter') }}.</li>
+</ul>
+<p>Nous ne vendons jamais vos données. Communication aux autorités uniquement si la loi l’exige.</p>
+
+
+<h2>5. Transferts hors Union européenne</h2>
+<p>
+{{ data_transfers_note|default('Par défaut, nous hébergeons dans l’UE. Si un prestataire implique un transfert hors UE, nous mettons en place des garanties appropriées (clauses contractuelles types, mesures supplémentaires). Liste et documentation disponibles sur demande.') }}
+</p>
+
+<h2>6. Durées de conservation</h2>
+<ul>
+<li>Compte utilisateur : jusqu’à suppression, ou {{ retention_user|default('36 mois') }} après la dernière activité.</li>
+<li>Logs techniques : {{ retention_logs|default('12 mois') }}.</li>
+<li>Cookies : au plus {{ retention_cookies|default('13 mois') }} (voir Politique cookies).</li>
+<li>Newsletter : jusqu’au désabonnement.</li>
+</ul>
+
+
+<h2>7. Vos droits</h2>
+<p>Conformément au RGPD, vous disposez des droits d’accès, rectification, effacement, limitation, opposition, portabilité.</p>
+<p>Pour les exercer : <a href="mailto:{{ dpo_email|default(contact_email|default('contact@example.com')) }}">{{ dpo_email|default(contact_email|default('contact@example.com')) }}</a>.
+Nous pouvons vous demander une preuve d’identité en cas de doute raisonnable.</p>
+<p>Vous pouvez également saisir l’autorité de contrôle (CNIL) : <a href="https://www.cnil.fr/">cnil.fr</a>.</p>
+
+
+<h2>8. Cookies</h2>
+<p>Les cookies nécessaires sont déposés pour le bon fonctionnement du site. Les cookies non essentiels (analytics, mesure d’audience) ne sont déposés qu’avec votre consentement. Vous pouvez modifier vos préférences</a> à tout moment.</p>
+
+
+<h2>9. Sécurité</h2>
+<p>Nous mettons en œuvre des mesures techniques et organisationnelles adaptées : chiffrement des mots de passe, contrôle d’accès, sauvegardes, journalisation.</p>
+
+
+<h2>10. Modifications</h2>
+<p>Nous pouvons mettre à jour la présente politique pour refléter des évolutions légales ou techniques. La version en vigueur est celle publiée à la date ci-dessus.</p>
+</article>
+</main>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+
+{% block title %}Conditions générales d’utilisation — {{ site_name|default('Votre site') }}{% endblock %}
+{% block meta_description %}CGU de {{ site_name|default('Votre site') }}.{% endblock %}
+
+
+{% block main %}
+<main class="rgpd">
+<article class="prose max-w-3xl mx-auto py-8">
+<h1>Conditions générales d’utilisation (CGU)</h1>
+<p><em>Dernière mise à jour : {{ last_update|default('now')|date('d/m/Y') }}</em></p>
+
+
+<h2>1. Objet</h2>
+<p>Les présentes CGU encadrent l’accès et l’utilisation du site {{ site_name|default('Nom du site') }} et de son jeu en ligne.</p>
+
+
+<h2>2. Inscription et compte</h2>
+<ul>
+<li>Vous devez fournir des informations exactes et les maintenir à jour.</li>
+<li>Le mot de passe est confidentiel ; vous êtes responsable de son utilisation.</li>
+<li>Nous pouvons suspendre ou supprimer tout compte en cas de fraude, non-respect des CGU ou demande légale.</li>
+</ul>
+
+
+<h2>3. Règles de conduite</h2>
+<ul>
+<li>Pas de triche, exploitation de bugs, bots ou scripts non autorisés.</li>
+<li>Pas d’insultes, propos haineux, harcèlement, spam.</li>
+<li>Pas de tentative d’attaque (DDoS, injection, etc.).</li>
+</ul>
+
+
+<h2>4. Propriété intellectuelle</h2>
+<p>Les éléments du site (textes, graphismes, logos, code) sont protégés. Toute reproduction non autorisée est interdite.</p>
+
+
+<h2>5. Contenus utilisateurs</h2>
+<p>Vous conservez vos droits sur vos contenus. En publiant, vous accordez à {{ company_name|default('l\'éditeur') }} une licence non exclusive, mondiale et gratuite pour héberger et afficher ces contenus dans le cadre du service.</p>
+
+<h2>6. Matchmaking et jeu</h2>
+<p>Le matchmaking vise à équilibrer les parties mais ne garantit pas des résultats ou latences spécifiques. Le service est fourni « en l’état ».</p>
+
+
+<h2>7. Responsabilité</h2>
+<p>{{ company_name|default('L\'éditeur') }} ne saurait être tenu responsable des dommages indirects, pertes de données, ou indisponibilités temporaires.</p>
+
+
+<h2>8. Suspension / résiliation</h2>
+<p>Nous pouvons suspendre l’accès en cas de non-respect des CGU. Vous pouvez supprimer votre compte à tout moment via votre espace personnel ou en nous contactant.</p>
+
+
+<h2>9. Données personnelles</h2>
+<p>Le traitement des données personnelles est détaillé dans notre <a href="{{ path('app_politique_de_confidentialite') }}">Politique de confidentialité</a>.</p>
+
+
+<h2>10. Droit applicable et juridiction</h2>
+<p>Les CGU sont soumises au droit {{ governing_law|default('français') }}. Tout litige sera porté devant les tribunaux compétents de {{ court_city|default('la ville du siège social') }}.</p>
+</article>
+</main>
+{% endblock %}

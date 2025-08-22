@@ -1,0 +1,37 @@
+@use '../base/variables' as v;
+
+footer {
+
+
+    .footer-content {
+        background: linear-gradient(180deg, rgba(255, 99, 216, 0.22), rgba(181, 114, 246, 0.18));
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1rem;
+        text-align: center;
+        color: v.$color-text;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        .legal {
+            ul {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 0.5rem;
+            }
+        }
+        p {
+            margin: 0.5rem 0;
+            font-size: 0.9rem;
+            color: black;
+            a {
+                color: v.$color-primary;
+                text-decoration: none;
+
+                &:hover {
+                    text-decoration: underline;
+                }
+            }
+        }
+    }
+}

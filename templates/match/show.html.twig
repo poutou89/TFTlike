@@ -1,0 +1,9 @@
+{# templates/match/show.html.twig #}
+{% extends 'base.html.twig' %}
+{% block title %}Match {{ match.id }}{% endblock %}
+{% block main %}
+  <div class="container" style="padding:1rem;color:#fff">
+    <h1>Match #{{ match.id }}</h1>
+    <p>Si tu vois cette page, le matchmaking a bien créé un GameMatch ✅</p>
+  </div>
+{% endblock %}

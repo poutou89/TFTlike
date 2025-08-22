@@ -1,0 +1,129 @@
+@use '../base/variables' as v;
+
+/* Scoper à la page */
+.page-team {
+  .container { width: min(1200px, 94%); margin-inline: auto; }
+
+  .tb-header {
+    text-align: center; color: v.$color-text; margin: 1.2rem 0 1rem;
+    h1 { font-family: v.$font-display, inherit; text-shadow: 0 2px 12px rgba(0,0,0,.45); }
+    p { opacity: .9; }
+  }
+
+  .tb-layout {
+    display: grid; 
+    grid-template-columns: 480px 1fr;
+    gap: 1rem;
+    @media (min-width: 440px) {
+      grid-template-columns: repeat(2, minmax(160px, 1fr));
+    }
+
+  .tb-sidebar, .tb-board {
+    background:
+      linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.06)) padding-box,
+      linear-gradient(120deg, v.$color-primary, v.$color-accent) border-box;
+    border: 1px solid transparent;
+    border-radius: 18px; padding: 1rem; color: v.$color-text;
+    backdrop-filter: blur(8px);
+  }
+
+  h2 { margin: .2rem 0 .6rem; font-size: 1.1rem; color: v.$color-accent; }
+
+  .btn {
+    display:inline-flex; align-items:center; gap:.5rem; padding:.6rem .8rem;
+    border-radius:12px; border:1px solid rgba(255,255,255,.18);
+    background: linear-gradient(90deg, v.$color-primary, v.$color-accent);
+    color:#0a0512; font-weight:800; cursor:pointer;
+    &.btn-ghost { background: rgba(255,255,255,.06); color: v.$color-text; border-color: rgba(255,255,255,.18); }
+    &:disabled { filter: grayscale(.3) brightness(.8); cursor:not-allowed; }
+  }
+
+  .tb-pick__head { display:flex; align-items:center; justify-content:space-between; }
+
+  .tb-bench__grid {
+    min-height: 120px;
+    border: 1px dashed rgba(255,255,255,.25);
+    border-radius: 12px;
+    background: rgba(255,255,255,.05);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+    gap: .6rem;
+    align-items: start;
+    padding: .6rem;
+  }
+
+  .tb-pick__grid {
+    display: grid;
+    gap: .8rem;
+
+    /* 1 colonne par défaut (360px <= 1x carte) */
+    grid-template-columns: 1fr;
+
+    /* passe à 2 colonnes quand il y a la place */
+    @media (min-width: 440px) {
+      grid-template-columns: repeat(2, minmax(160px, 1fr));
+    }
+  }
+
+  .tb-legend .legend-list { display:flex; flex-wrap:wrap; gap:.4rem; }
+  .tag { font-size:.8rem; padding:.2rem .5rem; border-radius:999px; border:1px solid rgba(255,255,255,.18);
+    &.tag-melee { background: rgba(255,130,160,.2); border-color: rgba(255,130,160,.4); }
+    &.tag-ranged { background: rgba(150,220,255,.2); border-color: rgba(150,220,255,.4); }
+    &.tag-tank { background: rgba(160,255,190,.2); border-color: rgba(160,255,190,.4); }
+    &.tag-heal { background: rgba(220,160,255,.2); border-color: rgba(220,160,255,.4); }
+    &.tag-family { background: rgba(255,255,255,.1); }
+  }
+
+  /* Cartes */
+  .tb-card {
+    display:flex; flex-direction:column; gap:.4rem;
+    background: rgba(10,6,20,.45); border:1px solid rgba(255,255,255,.15);
+    border-radius:14px; padding:.5rem; cursor:grab; user-select :none;
+    transition: transform .15s ease, box-shadow .2s ease, border-color .2s;
+    &:hover { transform: translateY(-2px); box-shadow:0 10px 20px rgba(0,0,0,.25); border-color: rgba(v.$color-accent,.45); }
+    &.dragging { opacity:.7; transform: scale(.98); }
+  }
+  .tb-card__img { aspect-ratio: 4/3; display:grid; place-items:center;
+    background: radial-gradient(600px 300px at 40% 10%, rgba(v.$color-primary,.2), transparent);
+    img { max-width: 90%; max-height: 90%; object-fit: contain; }
+  }
+  .tb-card__meta { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+  .tb-card__name { font-weight:800; }
+  .tb-card__stats { display:flex; gap:.4rem; font-size:.8rem; opacity:.9; }
+
+  /* Plateau */
+  .tb-board .board {
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(4, 84px);
+    gap: .35rem;
+    padding:.4rem;
+    background: rgba(10,6,20,.35);
+    border:1px solid rgba(255,255,255,.15);
+    border-radius: 14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .tb-board .cell {
+    background:
+      linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.05)) padding-box,
+      linear-gradient(120deg, rgba(255,255,255,.18), rgba(255,255,255,.08)) border-box;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    position: relative;
+  }
+  .chip {
+    position:absolute; inset: 4px;
+    background: rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.2);
+    border-radius: 10px; display:flex; align-items:center; gap:.4rem;
+    padding:.3rem .4rem; cursor:grab;
+    img { width: 28px; height: 28px; object-fit: cover; border-radius: 6px; }
+    span { font-size:.85rem; }
+  }
+  .chip.dragging { opacity:.75; }
+
+  .tb-actions { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; }
+  .tb-hint { opacity:.9; }
+}
+}

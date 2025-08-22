@@ -13,7 +13,7 @@
             {% block importmap %}{{ importmap('app') }}{% endblock %}
         {% endblock %}
     </head>
-    <body>
+    <body class="{% block body_class %}{% endblock %}">
         {% block header %}
             <header>
                 {% block navbar %}
@@ -28,7 +28,7 @@
 
                         <div class="auth-links">
                             {% if app.user %}
-                                <a href="#" class="btn btn-primary">Lancer une partie</a>
+                                <a href="{{ path('app_team_builder') }}" class="btn btn-primary" >Lancer une partie</a>
                                 <form action="{{ path('app_logout') }}" method="post">
                                     <a href="{{ path('app_logout') }}">🚪 Déconnexion</a>
                                 </form>
@@ -44,7 +44,21 @@
         {% endblock %}
         {% block main %}{% endblock %}
         {% block footer %}
-            <footer class="site-footer">
+            <footer>
+                <div class="footer-content">
+                    <p>&copy; 2025 MagicalArena. Tous droits réservés.</p>
+                    <p>Conçu par 
+                        <a href="https://github.com/poutou89">Poutou89</a>
+                        <a href="https://github.com/WeskerResidente">Wesker</a>
+                    </p>
+                    <div class="legal">
+                        <ul>
+                            <li><a class="btn" href="{{ path('app_cgu') }}">Conditions général d'utilisation</a></li>
+                            <li><a class="btn" href="{{ path('app_cookies') }}">Cookies</a></li>
+                            <li><a class="btn" href="{{ path('app_mentions_legales') }}">Mentions légales</a></li>
+                            <li><a class="btn" href="{{ path('app_politique_de_confidentialite') }}">Politique de confidentialité</a></li>
+                        </ul>
+                    </div>
             </footer>
         {% endblock %}
     </body>

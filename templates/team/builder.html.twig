@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Création d'équipe{% endblock %}
+{% block body_class %}page-team{% endblock %}
+
+{% block main %}
+<section class="team-builder container">
+  <header class="tb-header">
+    <h1>Création d’équipe</h1>
+    <p>Choisis 4 Magical Girls aléatoires parmi ta collection, place-les sur le plateau, puis lance une recherche de combat.</p>
+  </header>
+
+  <div class="tb-layout">
+    <!-- Colonne gauche : tirage & banc -->
+    <aside class="tb-sidebar">
+      <div class="tb-pick">
+        <div class="tb-pick__head">
+          <h2>Tirage</h2>
+          <button class="btn btn-ghost" id="btn-reroll">↻ Re-tirer</button>
+        </div>
+        <div class="tb-pick__grid" id="pick-grid"><!-- cartes tirage rendues par JS --></div>
+      </div>
+
+      <div class="tb-bench">
+        <h2>Banc</h2>
+        <div class="tb-bench__grid" id="bench-grid"><!-- cartes bench --></div>
+      </div>
+
+      <div class="tb-legend">
+        <h3>Classes</h3>
+        <div class="legend-list">
+          <span class="tag tag-melee">DPS CàC</span>
+          <span class="tag tag-ranged">DPS distance</span>
+          <span class="tag tag-tank">Tank</span>
+          <span class="tag tag-heal">Healer</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Plateau -->
+    <main class="tb-board">
+      <h2>Plateau</h2>
+      <div class="board" id="board" data-cols="7" data-rows="4">
+        {# Grille 7x4, notre camp à gauche (tout le plateau est drop OK côté client) #}
+        {% for r in 0..3 %}
+          {% for c in 0..6 %}
+            <div class="cell" data-x="{{ c }}" data-y="{{ r }}"></div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      <div class="tb-actions">
+        <button class="btn btn-primary" id="btn-lock" disabled>🔒 Verrouiller & Rechercher</button>
+        <div class="tb-hint">Place exactement 4 héroïnes.</div>
+      </div>
+    </main>
+  </div>
+</section>
+
+{# données pour le JS #}
+<script id="owned-girls-json" type="application/json">
+  {{ owned_girls|json_encode()|raw }}
+</script>
+<script>
+  window.ASSET_BASE = "{{ asset('images/mg/') }}";
+  window.MATCHMAKING = {
+    start:  '/matchmaking/start',
+    status: '/matchmaking/status/', // on concatènera l'id côté JS
+    cancel: '/matchmaking/cancel/'
+  };
+</script>
+<script>
+  window.MM = {
+    start: "{{ path('matchmaking_start') }}",
+    // on met un placeholder pour l’ID que le JS remplacera
+    status: "{{ path('matchmaking_status', {ticketId:'__ID__'}) }}"
+  };
+</script>
+{% endblock %}

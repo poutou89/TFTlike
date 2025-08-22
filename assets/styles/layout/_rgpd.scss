@@ -1,0 +1,9 @@
+@use '../base/variables' as v;
+
+.rgpd {
+    background: black;
+    padding: 4rem;
+    ul {
+        list-style-type: none;
+    }
+}
