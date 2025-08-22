@@ -9,6 +9,6 @@ import './styles/app.scss';
 import './JavaScript/team-builder.js';
 import './JavaScript/Inscription.js';
 import './JavaScript/home.js';
-
+import './JavaScript/match.js'; 
 
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');

@@ -62,18 +62,12 @@
   {{ owned_girls|json_encode()|raw }}
 </script>
 <script>
-  window.ASSET_BASE = "{{ asset('images/mg/') }}";
-  window.MATCHMAKING = {
-    start:  '/matchmaking/start',
-    status: '/matchmaking/status/', // on concatènera l'id côté JS
-    cancel: '/matchmaking/cancel/'
+  window.ASSET_BASE = "{{ asset('') }}";  // <-- racine ("/"), plus "images/mg/"
+  window.MM = {
+    start:  "{{ path('matchmaking_start') }}",                  // e.g. /matchmaking/start
+    status: "{{ path('matchmaking_status', {ticketId:'__ID__'}) }}",  // we replace __ID__ in JS
+    cancel: "{{ path('matchmaking_cancel', {ticketId: 0})|replace({'/0':'/'}) }}"
   };
 </script>
-<script>
-  window.MM = {
-    start: "{{ path('matchmaking_start') }}",
-    // on met un placeholder pour l’ID que le JS remplacera
-    status: "{{ path('matchmaking_status', {ticketId:'__ID__'}) }}"
-  };
 </script>
 {% endblock %}

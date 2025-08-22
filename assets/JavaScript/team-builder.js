@@ -1,12 +1,12 @@
 // team-builder.js
 
 // base des assets fournie par Twig: window.ASSET_BASE = "{{ asset('') }}";
-const ASSET_BASE = (window.ASSET_BASE || '/').replace(/\/?$/, '/');
-const fullImg = (p) => ASSET_BASE + String(p || '').replace(/^\/+/, '');
-
-console.log('Team Builder script loaded!', { ASSET_BASE });
 
 document.addEventListener('DOMContentLoaded', () => {
+  const ASSET_BASE = (window.ASSET_BASE || '/').replace(/\/?$/, '/');
+  const fullImg = (p) => ASSET_BASE + String(p || '').replace(/^\/+/, '');
+  
+  console.log('Team Builder script loaded!', { ASSET_BASE });
   const ownedEl   = document.getElementById('owned-girls-json');
   if (!ownedEl) return;
 
@@ -112,15 +112,22 @@ document.addEventListener('DOMContentLoaded', () => {
     return chip;
   }
 
-  function renderPick() {
-    pickGrid.innerHTML = '';
-    const picks = pickN(OWNED, 4); // toujours 4 si possible
-    picks.forEach(g => pickGrid.appendChild(renderCard(g, { source: 'pick' })));
+function renderPick() {
+  pickGrid.innerHTML = '';
+  let pool = [...OWNED];
+  if (pool.length === 0) return;
+
+  // on duplique si < 4
+  while (pool.length < 4) pool = pool.concat(OWNED);
+
+  const picks = [];
+  const taken = new Set();
+  while (picks.length < 4 && taken.size < pool.length) {
+    const i = Math.floor(Math.random() * pool.length);
+    if (!taken.has(i)) { taken.add(i); picks.push(pool[i]); }
   }
-  btnReroll?.addEventListener('click', (e) => {
-  e.preventDefault();
-  renderPick();           // re-génère 4 cartes aléatoires
-});
+  picks.forEach(g => pickGrid.appendChild(renderCard(g, { source: 'pick' })));
+}
   function classTag(cls) {
     switch (cls) {
       case 'dps_melee':  return 'tag-melee';
@@ -212,57 +219,65 @@ document.addEventListener('DOMContentLoaded', () => {
 let ticketId = null;
 let pollTimer = null;
 
-btnLock.addEventListener('click', () => {
+btnLock.addEventListener('click', async () => {
+  // build payload
   const lineup = Array.from(placed.entries()).map(([key, val]) => {
     const [x, y] = key.split(',').map(Number);
     return { id: val.girl.id, x, y };
   });
-  const START_URL = window.MM.start;
-  const statusUrl = (id) => window.MM.status.replace('__ID__', String(id));
-  fetch(START_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
-    body: JSON.stringify({ lineup }),
-  })
-  .then(async (r) => {
-    const text = await r.text();
+
+  const START_URL  = window.MM?.start  ?? '/matchmaking/start';
+  const STATUS_TPL = window.MM?.status ?? '/matchmaking/status/__ID__';
+  const statusUrl  = (id) => STATUS_TPL.replace('__ID__', String(id));
+
+  console.log('Calling START_URL =', START_URL);
+
+  try {
+    const res  = await fetch(START_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ lineup })
+    });
+
+    const text = await res.text();
     let data;
     try { data = JSON.parse(text); } catch { data = null; }
 
-    console.log('matchmaking/start ->', r.status, data ?? text);
+    console.log('matchmaking/start ->', res.status, data ?? text);
 
-    if (!r.ok) {
-      alert('Matchmaking failed (' + r.status + '):\n' + (data?.error ?? text));
-      throw new Error('HTTP ' + r.status);
+    if (!res.ok) {
+      alert(`Matchmaking failed (${res.status}):\n${data?.error ?? text}`);
+      return;
     }
-    return data;
-  })
-  .then((data) => {
+    if (!data || (data.status !== 'matched' && data.status !== 'queued')) {
+      alert('Réponse inattendue:\n' + (data ? JSON.stringify(data) : text));
+      return;
+    }
+
     if (data.status === 'matched') {
       window.location.href = `/match/${data.matchId}`;
       return;
     }
-    if (data.status === 'queued') {
-      ticketId = data.ticketId;
-      btnLock.disabled = true;
-      btnLock.textContent = '🔎 Recherche en cours…';
-      pollTimer = setInterval(async () => {
-        const res = await fetch(statusUrl(ticketId), { credentials: 'same-origin' });
-        const j = await res.json();
-        console.log('matchmaking/status ->', j);
-        if (j.status === 'matched') {
-          clearInterval(pollTimer);
-          window.location.href = `/match/${j.matchId}`;
-        }
-      }, 2000);
-      return;
-    }
-    alert('Réponse inattendue:\n' + JSON.stringify(data));
-  })
-  .catch((err) => {
-    console.error(err);
-  });
+
+    // queued -> poll status
+    ticketId = data.ticketId;
+    btnLock.disabled = true;
+    btnLock.textContent = '🔎 Recherche en cours…';
+
+    pollTimer = setInterval(async () => {
+      const r = await fetch(statusUrl(ticketId), { credentials: 'same-origin' });
+      const j = await r.json();
+      console.log('matchmaking/status ->', j);
+      if (j.status === 'matched') {
+        clearInterval(pollTimer);
+        window.location.href = `/match/${j.matchId}`;
+      }
+    }, 5000);
+  } catch (e) {
+    console.error(e);
+    alert('Erreur réseau: ' + e.message);
+  }
 });
 
   function updateLockState() {

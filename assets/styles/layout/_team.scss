@@ -9,7 +9,7 @@
     h1 { font-family: v.$font-display, inherit; text-shadow: 0 2px 12px rgba(0,0,0,.45); }
     p { opacity: .9; }
   }
-
+  
   .tb-layout {
     display: grid; 
     grid-template-columns: 480px 1fr;
@@ -126,4 +126,6 @@
   .tb-actions { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; }
   .tb-hint { opacity:.9; }
 }
+.page-team .tag:empty { display: none; }
+
 }

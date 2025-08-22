@@ -1,7 +1,14 @@
 {
+  "build/app.css": "/build/app.css",
   "build/app.js": "/build/app.js",
   "build/runtime.js": "/build/runtime.js",
+  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-1e0bba.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-1e0bba.js",
+  "build/images/Bg.png": "/build/images/Bg.8615679f.png",
   "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-9441c2.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-9441c2.js",
-  "build/app.css": "/build/app.css",
-  "build/images/Bg.png": "/build/images/Bg.8615679f.png"
+  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-3d0b71.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-3d0b71.js",
+  "build/assets_javascript_match_js.js": "/build/assets_javascript_match_js.js",
+  "build/vendors-node_modules_core-js_modules_es_array_filter_js-node_modules_core-js_modules_es_array-8ef21d.js": "/build/vendors-node_modules_core-js_modules_es_array_filter_js-node_modules_core-js_modules_es_array-8ef21d.js",
+  "build/assets_JavaScript_match_js.js": "/build/assets_JavaScript_match_js.js",
+  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-191092.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-191092.js",
+  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-45bd0e.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-45bd0e.js"
 }

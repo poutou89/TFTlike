@@ -1,9 +1,45 @@
-{# templates/match/show.html.twig #}
 {% extends 'base.html.twig' %}
-{% block title %}Match {{ match.id }}{% endblock %}
+
+{% block title %}Match #{{ match_id }}{% endblock %}
+{% block body_class %}page-match{% endblock %}
+
 {% block main %}
-  <div class="container" style="padding:1rem;color:#fff">
-    <h1>Match #{{ match.id }}</h1>
-    <p>Si tu vois cette page, le matchmaking a bien créé un GameMatch ✅</p>
+<section class="match container">
+  <header class="match__header">
+    <h1>Match #{{ match_id }}</h1>
+    <div class="match__controls">
+      <button class="btn btn-primary" id="btn-start">▶ Démarrer</button>
+      <button class="btn btn-ghost"   id="btn-pause">⏸ Pause</button>
+        <button class="btn btn-ghost"   id="btn-reset">↺ Reset</button>
+    </div>
+  </header>
+
+  <div class="match__layout">
+    <aside class="hud hud--left">
+      <h3>Alliés</h3>
+      <ul id="hud-allies"></ul>
+    </aside>
+
+    <main class="board-wrap">
+      <div class="board" id="board" data-cols="7" data-rows="4">
+        {% for r in 0..3 %}
+          {% for c in 0..6 %}
+            <div class="cell" data-x="{{ c }}" data-y="{{ r }}"></div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+      <div class="log" id="battle-log"></div>
+    </main>
+
+    <aside class="hud hud--right">
+      <h3>Ennemis</h3>
+      <ul id="hud-enemies"></ul>
+    </aside>
   </div>
+</section>
+
+{# données pour le JS #}
+<script id="allies-json" type="application/json">{{ allies|json_encode()|raw }}</script>
+<script id="enemies-json" type="application/json">{{ enemies|json_encode()|raw }}</script>
+<script>window.ASSET_BASE = "{{ asset('') }}";</script>
 {% endblock %}
