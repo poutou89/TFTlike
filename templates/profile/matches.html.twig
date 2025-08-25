@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+{% block title %}Mes matchs{% endblock %}
+{% block main %}
+<h1>Mes matchs</h1>
+<table class="table">
+  <thead>
+    <tr><th>ID Match</th><th>Adversaire</th><th>Voir</th></tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    {% set t = r[0] ?? r.t ?? r %}
+    {% set m = r.m ?? (t.gameMatch ?? null) %}
+    {% set opp = r.opp ?? null %}
+    <tr>
+      <td>{{ m ? m.id : '—' }}</td>
+      <td>{{ opp and opp.user ? opp.user.username : 'BOT / inconnu' }}</td>
+      <td>
+        {% if m %}
+          <a class="btn btn-sm btn-outline-primary" href="{{ path('app_match_show', {id:m.id}) }}">Revoir</a>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="3">Aucun match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

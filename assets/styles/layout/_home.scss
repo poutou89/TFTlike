@@ -16,7 +16,7 @@ button, input, select, textarea {
 }
 
 .container {
-  width: min(1100px, 100%);
+  max-width: 90%;
   margin-inline: auto;
 }
 /* Titres “magical” */
@@ -95,9 +95,9 @@ h1, h2, h3, .mg-title {
     min-height: 68vh;
     padding: 6rem 0 3rem;
 
-    @media (max-width: 900px) {
+    @media (max-width: 1120px) {
       grid-template-columns: 1fr;
-      padding: 4rem 0 2rem;
+      padding: 4rem 1rem 2rem;
     }
   }
 
@@ -129,6 +129,7 @@ h1, h2, h3, .mg-title {
 
   .mg-hero__art {
     position: relative;
+    padding: 0 2rem 0 1rem;
 
     img {
       width: 100%;
@@ -176,6 +177,7 @@ h1, h2, h3, .mg-title {
   p {
     opacity: .8;
     margin: .4rem 0 0;
+    text-shadow: 0px 2px 3px black;
   }
 }
 

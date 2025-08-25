@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller;
 
 use App\Entity\Hero;
@@ -15,45 +16,36 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\BattleSimulator;
+use App\Service\RatingService;
 
 #[Route('/matchmaking')]
 class MatchmakingController extends AbstractController
 {
-    public function __construct(private BattleSimulator $sim) {}
+    public function __construct(private BattleSimulator $sim ,private RatingService $rating) {}
 
-    /**
-     * Crée un ticket "queued" + tente PVP immédiat (pas de bot ici).
-     */
     #[Route('/start', name: 'matchmaking_start', methods: ['POST'])]
-    public function start(
-        Request $request,
-        EntityManagerInterface $em,
-        TeamRepository $teamRepo
-    ): JsonResponse {
+    public function start(Request $request, EntityManagerInterface $em, TeamRepository $teamRepo): JsonResponse
+    {
         $user = $this->getUser();
         if (!$user) return $this->json(['error' => 'auth'], 401);
 
         $payload = json_decode($request->getContent(), true) ?? [];
         $lineup  = $payload['lineup'] ?? [];
 
-        // 1) Ticket du joueur
         $team = (new Team())
             ->setUser($user)
             ->setLineup($lineup)
             ->setStatus('queued');
 
-        // (facultatif) lier les héros pour trace/debug
         foreach ($lineup as $slot) {
             $heroId = $slot['id'] ?? $slot['hero_id'] ?? null;
-            if (!$heroId) continue;
-            if ($hero = $em->getRepository(Hero::class)->find((int)$heroId)) {
+            if ($heroId && ($hero = $em->getRepository(Hero::class)->find((int)$heroId))) {
                 $team->addHero($hero);
             }
         }
         $em->persist($team);
         $em->flush();
 
-        // 2) Tenter un PVP tout de suite
         $em->beginTransaction();
         try {
             $opponent = $teamRepo->createQueryBuilder('t')
@@ -72,20 +64,69 @@ class MatchmakingController extends AbstractController
 
                 $team->setGameMatch($match)->setStatus('matched');
                 $opponent->setGameMatch($match)->setStatus('matched');
-
-                // flush pour obtenir l'ID du match (utile pour la seed)
                 $em->flush();
                 $em->commit();
 
-                // 3) Calculer et mémoriser un REPLAY déterministe (même des 2 côtés)
+                // REPLAY déterministe et stockage
                 $seed   = self::seedFor($match->getId(), $team->getId(), $opponent->getId());
                 $replay = $this->sim->simulate($team, $opponent, $seed);
+
+                // si tu as ajouté ces setters sur GameMatch :
+                if (method_exists($match, 'setSeed'))   $match->setSeed($seed);
+                if (method_exists($match, 'setReplay')) $match->setReplay($replay);
+                if (method_exists($match, 'setWinner')) $match->setWinner($replay['winner'] ?? null);
+                if (method_exists($match, 'setFinishedAt')) $match->setFinishedAt(new \DateTimeImmutable());
+                $em->flush();
+
+                // pour l’affichage immédiat du viewer courant (facultatif)
                 $request->getSession()->set('replay_'.$match->getId(), $replay);
 
+                    // ----- MMR (après génération du replay) -----
+                $teamA = $team;                // ta team
+                $teamB = $opponent;            // l'adversaire
+
+                $userA = $teamA->getUser();
+                $userB = $teamB->getUser();
+
+                $ra = $userA?->getMmr() ?? 1000;
+                $rb = $userB?->getMmr() ?? 1000;
+
+                // scoreA dépend du winner du REPLAY (ici 'ally' = ta team $team)
+                $scoreA = match ($replay['winner'] ?? 'draw') {
+                    'ally'  => 1.0,
+                    'enemy' => 0.0,
+                    default => 0.5,
+                };
+
+                $kA = $userA ? $this->rating->kFactor($userA, $userB?->getUsername()==='BOT') : 0;
+                $kB = $userB ? $this->rating->kFactor($userB, $userA?->getUsername()==='BOT') : 0;
+
+                ['a' => $dA, 'b' => $dB] = $this->rating->delta($ra, $rb, $scoreA, $kA, $kB);
+
+                if ($userA && $userA->getUsername() !== 'BOT') {
+                    $userA->setMmr(max(0, $ra + $dA));
+                    $userA->setGamesPlayed($userA->getGamesPlayed() + 1);
+                }
+                if ($userB && $userB->getUsername() !== 'BOT') {
+                    $userB->setMmr(max(0, $rb + $dB));
+                    $userB->setGamesPlayed($userB->getGamesPlayed() + 1);
+                }
+                // --------------------------------------------
+
+                // (optionnel) stocke seed/replay sur l'entité GameMatch
+                $match
+                    ->setSeed($seed)
+                    ->setReplay($replay)
+                    ->setWinner($replay['winner'] ?? null)
+                    ->setFinishedAt(new \DateTimeImmutable());
+
+                // si tu veux aussi le garder en session pour la vue
+                $request->getSession()->set('replay_'.$match->getId(), $replay);
+
+                $em->flush();
                 return $this->json(['status' => 'matched', 'matchId' => $match->getId()]);
             }
 
-            // pas d’adversaire : retourne queued, le front va poller /status
             $em->commit();
             return $this->json(['status' => 'queued', 'ticketId' => $team->getId()]);
         } catch (\Throwable $e) {
@@ -94,9 +135,6 @@ class MatchmakingController extends AbstractController
         }
     }
 
-    /**
-     * Polling d’état. Après 8s d’attente on crée un BOT et on match.
-     */
     #[Route('/status/{ticketId}', name: 'matchmaking_status', methods: ['GET'])]
     public function status(
         int $ticketId,
@@ -110,38 +148,31 @@ class MatchmakingController extends AbstractController
         $team = $teamRepo->find($ticketId);
         if (!$team) return $this->json(['error' => 'not_found'], 404);
 
-        // déjà matché ?
         if ($team->getStatus() === 'matched' && $team->getGameMatch()) {
             return $this->json(['status' => 'matched', 'matchId' => $team->getGameMatch()->getId()]);
         }
-
-        // autre statut
         if ($team->getStatus() !== 'queued') {
             return $this->json(['status' => $team->getStatus()]);
         }
 
-        // Toujours queued -> attendre un peu avant fallback bot
         $WAIT_SECONDS = 8;
         $age = (new \DateTimeImmutable())->getTimestamp() - $team->getCreatedAt()->getTimestamp();
         if ($age < $WAIT_SECONDS) {
             return $this->json(['status' => 'queued']);
         }
 
-        // 1) Trouver/créer l'utilisateur BOT
+        // crée le BOT si besoin
         $bot = $userRepo->findOneBy(['username' => 'BOT']);
         if (!$bot) {
             $bot = new \App\Entity\User();
             $bot->setUsername('BOT');
             $bot->setRoles(['ROLE_BOT']);
             $bot->setPassword($hasher->hashPassword($bot, bin2hex(random_bytes(8))));
-            if (method_exists($bot, 'setHistorique')) {
-                $bot->setHistorique('Compte IA');
-            }
+            if (method_exists($bot, 'setHistorique')) $bot->setHistorique('Compte IA');
             $em->persist($bot);
             $em->flush();
         }
 
-        // 2) Créer la team BOT (4 héros aléatoires posés à droite)
         $botTeam = (new Team())
             ->setUser($bot)
             ->setStatus('queued');
@@ -154,33 +185,35 @@ class MatchmakingController extends AbstractController
         foreach ($picks as $i => $h) {
             $botTeam->addHero($h);
             [$x,$y] = $slots[$i] ?? [6, $i % 4];
-            $line[] = ['id'=>$h->getId(), 'x'=>$x, 'y'=>$y];
+            $line[] = ['id'=>$h->getId(),'x'=>$x,'y'=>$y];
         }
         $botTeam->setLineup($line);
         $em->persist($botTeam);
 
-        // 3) Match + replay déterministe
         $match = new GameMatch();
         $em->persist($match);
 
         $team->setGameMatch($match)->setStatus('matched');
         $botTeam->setGameMatch($match)->setStatus('matched');
-
         $em->flush();
 
         $seed   = self::seedFor($match->getId(), $team->getId(), $botTeam->getId());
         $replay = $this->sim->simulate($team, $botTeam, $seed);
+
+        if (method_exists($match, 'setSeed'))   $match->setSeed($seed);
+        if (method_exists($match, 'setReplay')) $match->setReplay($replay);
+        if (method_exists($match, 'setWinner')) $match->setWinner($replay['winner'] ?? null);
+        if (method_exists($match, 'setFinishedAt')) $match->setFinishedAt(new \DateTimeImmutable());
+        $em->flush();
+
         $request->getSession()->set('replay_'.$match->getId(), $replay);
 
         return $this->json(['status' => 'matched', 'matchId' => $match->getId()]);
     }
 
     #[Route('/cancel/{ticketId}', name: 'matchmaking_cancel', methods: ['POST'])]
-    public function cancel(
-        int $ticketId,
-        EntityManagerInterface $em,
-        TeamRepository $teamRepo
-    ): JsonResponse {
+    public function cancel(int $ticketId, EntityManagerInterface $em, TeamRepository $teamRepo): JsonResponse
+    {
         $team = $teamRepo->find($ticketId);
         if ($team && $team->getUser() === $this->getUser() && $team->getStatus() === 'queued') {
             $em->remove($team);
@@ -189,11 +222,8 @@ class MatchmakingController extends AbstractController
         return $this->json(['ok' => true]);
     }
 
-    /**
-     * Seed stable (même résultat chez les 2 joueurs) à partir des IDs.
-     */
     private static function seedFor(int $matchId, int $teamAId, int $teamBId): int
     {
-        return (int) sprintf('%u', crc32($matchId . '|' . min($teamAId,$teamBId) . '|' . max($teamAId,$teamBId)));
+        return (int) sprintf('%u', crc32($matchId.'|'.min($teamAId,$teamBId).'|'.max($teamAId,$teamBId)));
     }
 }

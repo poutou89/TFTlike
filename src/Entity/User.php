@@ -15,10 +15,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
+    #[ORM\Column(type:'integer', options: ['default' => 1000])]
+    private int $mmr = 1000;
 
+    #[ORM\Column(type:'integer', options: ['default' => 0])]
+    private int $gamesPlayed = 0;
     #[ORM\Column(length: 180)]
     private ?string $username = null;
+    public function getMmr(): int { return $this->mmr; }
+    public function setMmr(int $mmr): self { $this->mmr = $mmr; return $this; }
 
+    public function getGamesPlayed(): int { return $this->gamesPlayed; }
+    public function setGamesPlayed(int $n): self { $this->gamesPlayed = $n; return $this; }
     /**
      * @var list<string> The user roles
      */

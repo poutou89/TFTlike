@@ -29,10 +29,14 @@
                         <div class="auth-links">
                             {% if app.user %}
                                 <a href="{{ path('app_team_builder') }}" class="btn btn-primary" >Lancer une partie</a>
+                                <a href="{{ path('me_matches') }}" class="btn btn-primary" >Lancer une partie</a>
                                 <form action="{{ path('app_logout') }}" method="post">
-                                    <a href="{{ path('app_logout') }}">🚪 Déconnexion</a>
+                                
+                                <a href="{{ path('app_logout') }}">🚪 Déconnexion</a>
                                 </form>
-                                <a href="{{ path('admin') }}">🛠 Administration</a></li>
+                                {% if is_granted('ROLE_ADMIN') %}
+                                    <a href="{{ path('admin') }}">🛠 Administration</a></li>
+                                {% endif %}
                             {% else %}
                                 <a href="{{ path('app_register') }}">Inscription</a>
                                 <a href="{{ path('app_login') }}">Connexion</a>

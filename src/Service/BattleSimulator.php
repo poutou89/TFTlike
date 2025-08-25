@@ -17,11 +17,12 @@ final class BattleSimulator
         $rng = new DeterministicRng($seed);
 
         // Build and sanitize units
-        $A     = $this->packFromLineup($allyTeam,  'ally');
-        $E     = $this->packFromLineup($enemyTeam, 'enemy');
-        $units = $this->sanitizeUnits(array_merge($A, $E));
+        $A = $this->packFromLineup($allyTeam,  'ally',  100000);
+        $E = $this->packFromLineup($enemyTeam, 'enemy', 200000);
 
+        $units = $this->sanitizeUnits(array_merge($A, $E));
         $actions = [];
+
         $tickMax = 999; // hard stop
 
         $rangeFor  = fn(string $cls) => ($cls === 'dps_ranged' || $cls === 'healer') ? 2 : 1;
@@ -168,9 +169,13 @@ final class BattleSimulator
                 'x'=>$u['x'],'y'=>$u['y'],'maxHp'=>$u['maxHp'],
             ];
         }
-
+        $teamsLegacy = [
+    'ally'  => array_values(array_filter($initial, fn($u) => ($u['team'] ?? '') === 'ally')),
+    'enemy' => array_values(array_filter($initial, fn($u) => ($u['team'] ?? '') === 'enemy')),
+    ];
         return [
             'seed'    => $rng->getSeed(),
+            'teams'   => $teamsLegacy,
             'initial' => $initial,
             'actions' => $actions,
             'winner'  => $winner,
@@ -183,57 +188,75 @@ final class BattleSimulator
      * Build units from a lineup, clamp stats, convert chances to 0..1 probabilities.
      * @return array<int,array<string,mixed>>
      */
-    private function packFromLineup(Team $team, string $side): array
+    private function packFromLineup(Team $team, string $side, int $uidBase): array
     {
         $lineup = $team->getLineup() ?? [];
 
         // keep only valid slots (array with numeric id and x/y present)
-        $slots = array_values(array_filter($lineup, static function ($s) {
-            return is_array($s)
-                && array_key_exists('id', $s) && is_numeric($s['id'])
-                && array_key_exists('x',  $s) && array_key_exists('y', $s);
-        }));
+    $slots = array_values(array_filter($lineup, static fn($s) =>
+        is_array($s) && isset($s['id'],$s['x'],$s['y']) && is_numeric($s['id'])
+    ));
+        // 🔁 Fallback : si pas de slots, on fabrique à partir des héros liés
+        if (!$slots) {
+            $heroes = method_exists($team, 'getHeroes')
+                ? $team->getHeroes()
+                : array_values(array_filter(array_map(
+                    fn($link) => method_exists($link,'getHero') ? $link->getHero() : null,
+                    method_exists($team,'getMembers') ? $team->getMembers()->toArray() : []
+                )));
+            $xCol = ($side === 'ally') ? 1 : 5;
+            foreach ($heroes as $i => $h) {
+                if (!$h) continue;
+                $slots[] = ['id' => $h->getId(), 'x' => $xCol, 'y' => $i % 4];
+            }
+        }
+
         if (!$slots) return [];
 
-        $ids    = array_values(array_unique(array_map(fn($s) => (int)$s['id'], $slots)));
-        $heroes = $this->heroes->findBy(['id' => $ids]);
-        $byId   = [];
+        $ids    = array_values(array_unique(array_map(fn($s)=>(int)$s['id'], $slots)));
+        $heroes = $this->heroes->findBy(['id'=>$ids]);
+        $byId = []; foreach ($heroes as $h) $byId[$h->getId()] = $h;
+
         foreach ($heroes as $h) $byId[$h->getId()] = $h;
-
-        $out = [];
+        $out = []; $i = 0;
         foreach ($slots as $slot) {
-            $hid = (int)$slot['id'];
-            if (!isset($byId[$hid])) continue;
+        $hid = (int)$slot['id'];
+        if (!isset($byId[$hid])) continue;
 
-            /** @var Hero $h */
-            $h   = $byId[$hid];
-            $img = $this->resolveImagePath($h->getPicture());
+        /** @var Hero $h */
+        $h   = $byId[$hid];
+        $img = $this->resolveImagePath($h->getPicture());
 
-            $acc   = max(0, min(100, (int)($h->getChanceAtk()  ?? 0))) / 100;
-            $crit  = max(0, min(100, (int)($h->getChanceCrit() ?? 0))) / 100;
-            $dodge = max(0, min(100, (int)($h->getChanceEsq()  ?? 0))) / 100;
+        // % -> proba 0..1 avec minimum
+        $accRaw   = (int)($h->getChanceAtk()  ?? 85);
+        $critRaw  = (int)($h->getChanceCrit() ?? 10);
+        $dodgeRaw = (int)($h->getChanceEsq()  ?? 5);
+        $acc   = max(0.70, min(1.00, $accRaw   / 100)); // 👈 at least 70% hit rate
+        $crit  = max(0.00, min(0.30, $critRaw  / 100)); // up to 30%
+        $dodge = max(0.00, min(0.15, $dodgeRaw / 100)); // cap dodge at 15%
+
+        $uid = $uidBase + ($i++); // 👈 id d’unité UNIQUE (int)
 
             $out[] = [
-                'team'   => $side,
-                'id'     => $h->getId(),
-                'name'   => $h->getNom(),
-                'img'    => $img,
-                'class'  => $this->mapRoleToClass($h),
-                'family' => $h->getFamily() ?? ($h->getFamilyId()?->getNom() ?? ''),
-                'maxHp'  => (int)($h->getPdv() ?? 0),
-                'hp'     => (int)($h->getPdv() ?? 0),
-                'atk'    => (int)($h->getAtk() ?? 0),
-                'shield' => (int)($h->getShield() ?? 0),
-                'mana'   => (int)($h->getMana() ?? 0),
-                'acc'    => $acc,
-                'crit'   => $crit,
-                'dodge'  => $dodge,
-                'x'      => (int)($slot['x'] ?? 0),
-                'y'      => (int)($slot['y'] ?? 0),
-            ];
-        }
-        return $out;
+            'id'     => $uid,       // <-- utilisé dans actions
+            'hid'    => $h->getId(),// (optionnel: id de héros)
+            'team'   => $side,
+            'name'   => $h->getNom(),
+            'img'    => $img,
+            'class'  => $this->mapRoleToClass($h),
+            'family' => $h->getFamily() ?? ($h->getFamilyId()?->getNom() ?? ''),
+            'maxHp'  => (int)($h->getPdv() ?? 0),
+            'hp'     => (int)($h->getPdv() ?? 0),
+            'atk'    => (int)($h->getAtk() ?? 0),
+            'shield' => (int)($h->getShield() ?? 0),
+            'mana'   => (int)($h->getMana() ?? 0),
+            'acc'    => $acc, 'crit'=>$crit, 'dodge'=>$dodge,
+            'x'      => (int)$slot['x'],
+            'y'      => (int)$slot['y'],
+        ];
     }
+    return $out;
+}
 
     /** Remove invalid/null entries and enforce required keys. */
     private function sanitizeUnits(array $units): array

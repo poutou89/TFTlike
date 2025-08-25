@@ -1,4 +1,3 @@
-// assets/JavaScript/match.js
 document.addEventListener('DOMContentLoaded', () => {
   if (!document.body.classList.contains('page-match')) return;
 
@@ -13,224 +12,94 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnPause = document.getElementById('btn-pause');
   const btnReset = document.getElementById('btn-reset');
 
-    if (!board || !logEl || !hudA || !hudE || !btnStart || !btnPause || !btnReset) {
+  if (!board || !logEl || !hudA || !hudE || !btnStart || !btnPause || !btnReset) {
     console.warn('Match UI missing', { board, logEl, hudA, hudE, btnStart, btnPause, btnReset });
     return;
   }
-  /** @type {{id:number,name:string,img:string,class:string,family?:string,hp:number,atk:number,shield:number,mana:number,acc:number,crit:number,dodge:number,x:number,y:number}[]} */
-  const ALLIES  = JSON.parse(document.getElementById('allies-json')?.textContent || '[]');
-  const ENEMIES = JSON.parse(document.getElementById('enemies-json')?.textContent || '[]');
-  console.log('MATCH DATA ->', { ALLIES, ENEMIES });
 
-  // ---- state ----
-  let units = []; // {team,id,name,img,class,family,maxHp,hp,atk,shield,mana,acc,crit,dodge,x,y,el}
-  let timer = null;
+  const REPLAY = JSON.parse(document.getElementById('replay-json')?.textContent || '{}');
+  if (!REPLAY || !Array.isArray(REPLAY.initial)) { console.warn('No replay provided'); return; }
+  console.debug('REPLAY:', REPLAY,
+                'allyCount=', REPLAY.initial.filter(u=>u.team==='ally').length,
+                'enemyCount=', REPLAY.initial.filter(u=>u.team==='enemy').length);
 
-  // ---- constants ----
+  const unitsById = new Map(); // id -> runtime unit
+  let timer = null, step = 0;
   const TICK_MS = 400;
-  const CRIT_MULT = 1.5;
-  const HEAL_COST = 20;
 
-  // ---- helpers ----
   const cell = (x,y) => board.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-  const inBounds = (x,y) => (x>=0 && x<7 && y>=0 && y<4);
-  const dist = (a,b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-  const pctToProb = (v) => clamp01((v || 0) / 100);
-  const roll = (p) => Math.random() < p;
-  const rangeFor = (cls) => (cls === 'dps_ranged' || cls === 'healer' ? 2 : 1);
 
-  function log(msg) {
-    const line = document.createElement('div');
-    line.textContent = msg;
-    logEl.appendChild(line);
-    logEl.scrollTop = logEl.scrollHeight;
+  function log(msg){ if(!msg)return; const d=document.createElement('div'); d.textContent=msg;
+    logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
+
+  function renderHUD(){
+    const list = (team) => [...unitsById.values()].filter(u=>u.team===team)
+      .map(u=>`<li><img src="${full(u.img)}"><span>${u.name}</span><em>${u.hp} PV${u.shield>0?' • 🛡'+u.shield:''}${u.mana>0?' • 🔷'+u.mana:''}</em></li>`).join('');
+    hudA.innerHTML = list('ally'); hudE.innerHTML = list('enemy');
   }
 
-  function renderHUD() {
-    const line = (u) =>
-      `<li><img src="${full(u.img)}"><span>${u.name}</span><em>${u.hp} PV${u.shield>0 ? ' • 🛡'+u.shield : ''}${u.mana>0 ? ' • 🔷'+u.mana : ''}</em></li>`;
-    hudA.innerHTML = units.filter(u => u.team==='ally').map(line).join('');
-    hudE.innerHTML = units.filter(u => u.team==='enemy').map(line).join('');
+  function updateBars(u){
+    u.el.querySelector('.hp').textContent = u.hp;
+    const sh=u.el.querySelector('.shield'); if(sh){ sh.textContent=u.shield; sh.style.display=u.shield>0?'':'none'; }
+    const ma=u.el.querySelector('.mana');   if(ma){ ma.textContent=u.mana;   ma.style.display=u.mana>0?'':'none'; }
   }
 
-  function spawn(u0) {
-    const u = {
-      team: u0.team,
-      id: u0.id, name: u0.name, img: u0.img, class: u0.class, family: u0.family,
-      maxHp: u0.hp, hp: u0.hp, atk: u0.atk,
-      shield: u0.shield || 0, mana: u0.mana || 0,
-      acc: pctToProb(u0.acc), crit: pctToProb(u0.crit), dodge: pctToProb(u0.dodge),
-      x: u0.x, y: u0.y, el: null
-    };
-    const el = document.createElement('div');
-    el.className = `unit unit--${u.team} unit--${u.class}`;
-    el.innerHTML = `
-      <img src="${full(u.img)}" alt="">
-      <span class="hp">${u.hp}</span>
-      <span class="shield"${u.shield>0?'':' style="display:none"'}>${u.shield}</span>
-      <span class="mana"${u.mana>0?'':' style="display:none"'}>${u.mana}</span>`;
-    const c = cell(u.x, u.y);
-    if (c) c.appendChild(el);
-    u.el = el;
-    units.push(u);
-  }
-
-  function reset() {
-    board.querySelectorAll('.cell').forEach(c => c.innerHTML = '');
-    hudA.innerHTML = ''; hudE.innerHTML = ''; logEl.innerHTML = '';
-    units = [];
-    ALLIES.forEach(u => spawn({...u, team:'ally'}));
-    ENEMIES.forEach(u => spawn({...u, team:'enemy'}));
+  function spawnInitial(){
+    board.querySelectorAll('.cell').forEach(c=>c.innerHTML=''); logEl.innerHTML=''; unitsById.clear();
+    for(const u0 of REPLAY.initial){
+      const u = {...u0};
+      const el = document.createElement('div');
+      el.className = `unit unit--${u.team} unit--${u.class}`;
+      el.innerHTML = `
+        <img src="${full(u.img)}" alt="">
+        <span class="hp">${u.hp}</span>
+        <span class="shield"${u.shield>0?'':' style="display:none"'}>${u.shield}</span>
+        <span class="mana"${u.mana>0?'':' style="display:none"'}>${u.mana}</span>`;
+      const c = cell(u.x, u.y); if (c) c.appendChild(el);
+      u.el = el; unitsById.set(u.id, u);
+    }
     renderHUD();
   }
 
-  function nearestEnemy(me) {
-    let best = null, bestD = 999;
-    for (const u of units) {
-      if (u.team === me.team || u.hp <= 0) continue;
-      const d = dist(me, u);
-      if (d < bestD) { best = u; bestD = d; }
-    }
-    return best;
-  }
-
-  function moveToward(me, target) {
-    const dx = Math.sign(target.x - me.x);
-    const dy = Math.sign(target.y - me.y);
-    const candidates = [
-      {x: me.x + dx, y: me.y},
-      {x: me.x, y: me.y + dy},
-    ].filter(p => inBounds(p.x,p.y));
-
-    for (const p of candidates) {
-      const occ = units.find(u => u.hp>0 && u.x===p.x && u.y===p.y);
-      if (!occ) {
-        const to = cell(p.x, p.y);
-        if (to) { to.appendChild(me.el); me.x = p.x; me.y = p.y; }
-        return true;
+  function applyAction(a){
+    switch(a.t){
+      case 'move': {
+        const u=unitsById.get(a.id); if(!u)break;
+        const to=cell(a.to[0],a.to[1]); if(!to)break;
+        to.appendChild(u.el); u.x=a.to[0]; u.y=a.to[1];
+        break;
       }
-    }
-    return false;
-  }
-
-  function updateBars(u) {
-    u.el.querySelector('.hp').textContent = u.hp;
-    const sh = u.el.querySelector('.shield');
-    if (sh) { sh.textContent = Math.max(0, u.shield); sh.style.display = u.shield>0 ? '' : 'none'; }
-    const ma = u.el.querySelector('.mana');
-    if (ma) { ma.textContent = Math.max(0, u.mana);   ma.style.display = u.mana>0   ? '' : 'none'; }
-  }
-
-  function applyDamage(def, rawDmg, byName) {
-    // réduction passive tank (20%)
-    if (def.class === 'tank') rawDmg = Math.round(rawDmg * 0.8);
-
-    let dmg = rawDmg;
-
-    // bouclier absorbe en premier
-    if (def.shield > 0) {
-      const absorbed = Math.min(def.shield, dmg);
-      def.shield -= absorbed;
-      dmg -= absorbed;
-      if (absorbed > 0) log(`${byName} entame le bouclier de ${def.name} (${absorbed})`);
-    }
-
-    if (dmg > 0) {
-      def.hp = Math.max(0, def.hp - dmg);
-      if (def.hp <= 0) {
-        def.el.classList.add('ko');
-        setTimeout(() => def.el.remove(), 150);
+      case 'attack': {
+        const att=unitsById.get(a.att), def=unitsById.get(a.def); if(!att||!def)break;
+        def.hp=a.hp; def.shield=a.shield; if(a.mana!==undefined) att.mana=a.mana;
+        updateBars(def); updateBars(att);
+        if(def.hp<=0){ def.el.classList.add('ko'); setTimeout(()=>def.el.remove(),120); }
+        if(a.log) log(a.log);
+        break;
       }
+      case 'heal': {
+        const src=unitsById.get(a.src), dst=unitsById.get(a.dst); if(!src||!dst)break;
+        if(a.mana!==undefined) src.mana=a.mana;
+        dst.hp=Math.min(dst.maxHp,(dst.hp??0)+(a.amount??0));
+        updateBars(src); updateBars(dst); if(a.log) log(a.log);
+        break;
+      }
+      case 'log': if(a.msg) log(a.msg); break;
     }
-    updateBars(def);
   }
 
-  function attack(att, def) {
-    // précision / esquive
-    if (!roll(att.acc)) { log(`${att.name} rate ${def.name}`); return; }
-    if (roll(def.dodge)) { log(`${def.name} esquive l'attaque de ${att.name}`); return; }
-
-    // dégâts (+critique)
-    let dmg = att.atk;
-    const isCrit = roll(att.crit);
-    if (isCrit) dmg = Math.round(dmg * CRIT_MULT);
-
-    applyDamage(def, dmg, att.name);
-    log(`${att.name} frappe ${def.name} (${dmg}${isCrit ? ' ⚡ crit' : ''})`);
-
-    // petit gain de mana offensif
-    att.mana = Math.min(100, (att.mana || 0) + 5);
-    updateBars(att);
-  }
-
-  function heal(healer) {
-    // cible : allié le plus blessé (dans la portée du heal = 2)
-    const R = rangeFor('healer');
-    let target = null, worst = 2;
-    for (const u of units) {
-      if (u.team !== healer.team || u.hp <= 0 || u.hp >= u.maxHp) continue;
-      if (dist(healer, u) > R) continue;
-      const r = u.hp / u.maxHp; // plus petit => plus blessé
-      if (r < worst) { worst = r; target = u; }
-    }
-    if (!target) return false;
-
-    if ((healer.mana || 0) < HEAL_COST) return false;
-
-    const amount = Math.max(10, Math.round(0.6 * healer.atk));
-    healer.mana -= HEAL_COST;
-    target.hp = Math.min(target.maxHp, target.hp + amount);
-    updateBars(healer);
-    updateBars(target);
-    log(`${healer.name} soigne ${target.name} (+${amount})`);
-    return true;
-  }
-
-  function tick() {
-    // fin ?
-    const aliveA = units.some(u => u.team==='ally' && u.hp>0);
-    const aliveE = units.some(u => u.team==='enemy' && u.hp>0);
-    if (!aliveA || !aliveE) {
-      clearInterval(timer); timer = null;
-      log(!aliveA && !aliveE ? 'Égalité !' : !aliveA ? 'Défaite…' : 'Victoire !');
+  function playTick(){
+    if(step >= (REPLAY.actions?.length || 0)){
+      clearInterval(timer); timer=null;
+      log(REPLAY.winner==='ally'?'Victoire !':REPLAY.winner==='enemy'?'Défaite…':'Égalité !');
       return;
     }
-
-    // ordre déterministe: alliés puis ennemis
-    const turn = [...units]
-      .filter(u => u.hp>0)
-      .sort((a,b) => (a.team === b.team ? 0 : (a.team === 'ally' ? -1 : 1)));
-
-    for (const me of turn) {
-      if (me.hp <= 0) continue;
-
-      // tick mana passif
-      me.mana = Math.min(100, (me.mana || 0) + (me.class === 'healer' ? 10 : 3));
-      updateBars(me);
-
-      if (me.class === 'healer') {
-        if (heal(me)) continue; // soin prioritaire si possible
-      }
-
-      const foe = nearestEnemy(me);
-      if (!foe) continue;
-
-      const d = dist(me, foe);
-      const R = rangeFor(me.class);
-
-      if (d <= R) attack(me, foe);
-      else moveToward(me, foe);
-    }
-
-    renderHUD();
+    applyAction(REPLAY.actions[step++]); renderHUD();
   }
 
-  // ---- buttons ----
-  btnStart.addEventListener('click', () => { if (!timer) timer = setInterval(tick, TICK_MS); });
-  btnPause.addEventListener('click', () => { if (timer) { clearInterval(timer); timer = null; } });
-  btnReset.addEventListener('click', () => { if (timer) { clearInterval(timer); timer = null; } reset(); });
+  btnStart.addEventListener('click', ()=>{ if(!timer) timer=setInterval(playTick,TICK_MS); });
+  btnPause.addEventListener('click', ()=>{ if(timer){ clearInterval(timer); timer=null; } });
+  btnReset.addEventListener('click', ()=>{ if(timer){ clearInterval(timer); timer=null; } step=0; spawnInitial(); });
 
-  // init
-  reset();
+  spawnInitial();
 });

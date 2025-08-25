@@ -38,8 +38,11 @@
   </div>
 </section>
 
-{# données pour le JS #}
-<script id="allies-json" type="application/json">{{ allies|json_encode()|raw }}</script>
-<script id="enemies-json" type="application/json">{{ enemies|json_encode()|raw }}</script>
-<script>window.ASSET_BASE = "{{ asset('') }}";</script>
+{# si tu utilises ces balises quelque part #}
+<script id="allies-from-replay" type="application/json">
+  {{ (replay.teams.ally  | default([])) | json_encode | raw }}
+</script>
+<script id="enemies-from-replay" type="application/json">
+  {{ (replay.teams.enemy | default([])) | json_encode | raw }}
+</script>
 {% endblock %}
