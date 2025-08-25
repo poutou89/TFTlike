@@ -34,120 +34,39 @@ final class MatchController extends AbstractController
             return $this->redirectToRoute('app_team_builder');
         }
 
-        // --- Récupère les 2 équipes liées au match ---
+        // 1) Récupère les deux équipes liées au match
         $teams = $teamRepo->findBy(['gameMatch' => $match], ['id' => 'ASC']);
+        if (count($teams) < 1) {
+            $this->addFlash('error', 'Aucune équipe liée à ce match.');
+            return $this->redirectToRoute('app_team_builder');
+        }
 
-        // Détermine ally/enemy par rapport à l'utilisateur courant
+        // 2) Détermine ally/enemy
         $user     = $this->getUser();
         $allyTeam = null;
         $enemyTeam = null;
-
         foreach ($teams as $t) {
-            if ($user && $t->getUser() === $user) {
-                $allyTeam = $t;
-            } else {
-                $enemyTeam = $t;
-            }
+            if ($user && $t->getUser() === $user) $allyTeam = $t; else $enemyTeam = $t;
         }
-        // Si on ne sait pas, prend l’ordre naturel
-        if (!$allyTeam && isset($teams[0])) $allyTeam = $teams[0] ?? null;
+        if (!$allyTeam) $allyTeam = $teams[0] ?? null;
         if (!$enemyTeam && isset($teams[1])) $enemyTeam = $teams[1] ?? null;
 
-        // Données "HUD" pour le template
+        // 3) Construit les listes HUD (fallback si lineup vide)
         $allies  = $allyTeam  ? $this->packFromLineup($allyTeam,  $heroRepo) : [];
         $enemies = $enemyTeam ? $this->packFromLineup($enemyTeam, $heroRepo) : [];
 
-        // --- Récupération/sécurisation du REPLAY ---
-        $session = $request->getSession();
-        $replay  = $session?->get('replay_'.$match->getId());
-
-        $isInvalid = static function ($r): bool {
-            if (!is_array($r)) return true;
-            if (!isset($r['initial']) || !is_array($r['initial'])) return true;
-            return false;
-        };
-
-        // Si la session est vide/invalide → tente la BDD
-        if ($isInvalid($replay)) {
-            $dbReplay = $match->getReplay();
-            if (!$isInvalid($dbReplay)) {
-                $replay = $dbReplay;
-            }
-        }
-
-        // Si toujours rien et qu’on a bien 2 équipes → (re)simule
-        if ($isInvalid($replay) && $allyTeam && $enemyTeam) {
-            $ids  = [$allyTeam->getId(), $enemyTeam->getId()];
-            sort($ids);
-            $seed   = (int) sprintf('%u', crc32('m:'.$match->getId().';t:'.$ids[0].','.$ids[1]));
+        // 4) (Re)génère un replay déterministe (toujours) → plus de "No replay provided"
+        $replay = [];
+        if ($allyTeam && $enemyTeam) {
+            $seed   = $this->stableSeed($match->getId(), $allyTeam->getId(), $enemyTeam->getId());
             $replay = $this->sim->simulate($allyTeam, $enemyTeam, $seed);
-
-            // (optionnel) persiste côté BDD pour rechargements futurs
-            // $match->setSeed($seed)->setReplay($replay);
-            // $em->flush();
-
-            // met en session
-            $session?->set('replay_'.$match->getId(), $replay);
         }
 
-        // Fallback minimal pour éviter tout warning
-        if ($isInvalid($replay)) {
-            $replay = [
-                'seed'    => 0,
-                'initial' => [],
-                'actions' => [],
-                'winner'  => 'draw',
-            ];
-        }
+        // 5) Normalisation dure pour garantir les clés attendues par le front
+        $replay = $this->normalizeReplay($replay, $allies, $enemies);
 
-        // --- Normalisation : assure 'teams' quoi qu’il arrive (utile si ton front l’attend ailleurs) ---
-        if (!isset($replay['teams'])) {
-            $init = $replay['initial'] ?? [];
-            $replay['teams'] = [
-                'ally'  => array_values(array_filter($init, fn($u) => ($u['team'] ?? '') === 'ally')),
-                'enemy' => array_values(array_filter($init, fn($u) => ($u['team'] ?? '') === 'enemy')),
-            ];
-        } else {
-            if (!is_array($replay['teams']['ally'] ?? null))  { $replay['teams']['ally']  = []; }
-            if (!is_array($replay['teams']['enemy'] ?? null)) { $replay['teams']['enemy'] = []; }
-        }
-        // --- Fallback serveur: si pas d'initial dans le replay, on construit depuis allies/enemies ---
-        if (!isset($replay['initial']) || !is_array($replay['initial']) || count($replay['initial']) === 0) {
-            $mk = function(array $units, string $team): array {
-                return array_map(
-                    fn($u) => [
-                        'id'     => (int)($u['id'] ?? 0),
-                        'team'   => $team,
-                        'name'   => (string)($u['name'] ?? ''),
-                        'img'    => (string)($u['img'] ?? '/images/placeholders/hero.png'),
-                        'class'  => (string)($u['class'] ?? 'dps_ranged'),
-                        'family' => (string)($u['family'] ?? ''),
-                        'hp'     => (int)($u['hp'] ?? 0),
-                        'atk'    => (int)($u['atk'] ?? 0),
-                        'shield' => (int)($u['shield'] ?? 0),
-                        'mana'   => (int)($u['mana'] ?? 0),
-                        'acc'    => (float)($u['acc'] ?? 0),
-                        'crit'   => (float)($u['crit'] ?? 0),
-                        'dodge'  => (float)($u['dodge'] ?? 0),
-                        'x'      => (int)($u['x'] ?? 0),
-                        'y'      => (int)($u['y'] ?? 0),
-                        'maxHp'  => (int)($u['hp'] ?? 0),
-                    ],
-                    $units
-                );
-            };
-
-            $replay['initial'] = array_merge($mk($allies, 'ally'), $mk($enemies, 'enemy'));
-            if (!isset($replay['actions']) || !is_array($replay['actions'])) $replay['actions'] = [];
-            if (!isset($replay['winner'])) $replay['winner'] = 'draw';
-            if (!isset($replay['seed'])) $replay['seed'] = 0;
-
-            // Assure aussi 'teams'
-            $replay['teams'] = [
-                'ally'  => $mk($allies, 'ally'),
-                'enemy' => $mk($enemies, 'enemy'),
-            ];
-        }
+        // 6) Stocke en session (utile si tu recharges)
+        $request->getSession()?->set('replay_'.$match->getId(), $replay);
 
         return $this->render('match/show.html.twig', [
             'match_id' => $id,
@@ -159,11 +78,14 @@ final class MatchController extends AbstractController
 
     // ---------- helpers ----------
 
-    /**
-     * Construit [{id,name,img,class,family,hp,atk,shield,mana,acc,crit,dodge,x,y}, ...]
-     * depuis Team::lineup (slots {id,x,y}). Fallback si lineup vide.
-     * @return array<int,array<string,mixed>>
-     */
+    private function stableSeed(int $matchId, int $teamAId, int $teamBId): int
+    {
+        $a = min($teamAId, $teamBId);
+        $b = max($teamAId, $teamBId);
+        return (int) sprintf('%u', crc32('m:'.$matchId.';t:'.$a.','.$b));
+    }
+
+    /** @return array<int,array<string,mixed>> */
     private function packFromLineup(Team $team, HeroRepository $heroRepo): array
     {
         $lineup = $team->getLineup() ?? [];
@@ -181,14 +103,12 @@ final class MatchController extends AbstractController
                 $isAlly = $team->getUser() === $this->getUser();
                 $xCol   = $isAlly ? 1 : 5;
                 foreach ($heroes as $i => $h) {
-                    if ($h) {
-                        $lineup[] = ['id' => $h->getId(), 'x' => $xCol, 'y' => $i % 4];
-                    }
+                    if ($h) $lineup[] = ['id' => $h->getId(), 'x' => $xCol, 'y' => $i % 4];
                 }
             }
         }
 
-        // Garde seulement les slots valides
+        // Slots valides
         $slots = array_values(array_filter(
             $lineup,
             fn($s) => is_array($s) && array_key_exists('id', $s) && is_numeric($s['id'])
@@ -236,13 +156,61 @@ final class MatchController extends AbstractController
         return $out;
     }
 
+    /** Garantit seed/initial/actions/winner/teams même si simulate() retourne vide */
+    private function normalizeReplay(array $replay, array $allies, array $enemies): array
+    {
+        $mk = function(array $units, string $team): array {
+            return array_map(fn($u) => [
+                'id'     => (int)($u['id'] ?? 0),
+                'team'   => $team,
+                'name'   => (string)($u['name'] ?? ''),
+                'img'    => (string)($u['img'] ?? '/images/placeholders/hero.png'),
+                'class'  => (string)($u['class'] ?? 'dps_ranged'),
+                'family' => (string)($u['family'] ?? ''),
+                'hp'     => (int)($u['hp'] ?? 0),
+                'atk'    => (int)($u['atk'] ?? 0),
+                'shield' => (int)($u['shield'] ?? 0),
+                'mana'   => (int)($u['mana'] ?? 0),
+                'acc'    => (float)($u['acc'] ?? 0),
+                'crit'   => (float)($u['crit'] ?? 0),
+                'dodge'  => (float)($u['dodge'] ?? 0),
+                'x'      => (int)($u['x'] ?? 0),
+                'y'      => (int)($u['y'] ?? 0),
+                'maxHp'  => (int)($u['hp'] ?? 0),
+            ], $units);
+        };
+
+        if (!is_array($replay)) $replay = [];
+
+        $hasInitial = isset($replay['initial']) && is_array($replay['initial']);
+        if (!$hasInitial) {
+            $replay['initial'] = array_merge($mk($allies,'ally'), $mk($enemies,'enemy'));
+        }
+
+        if (!isset($replay['actions']) || !is_array($replay['actions'])) $replay['actions'] = [];
+        if (!isset($replay['winner']))  $replay['winner']  = 'draw';
+        if (!isset($replay['seed']))    $replay['seed']    = 0;
+
+        if (!isset($replay['teams']) || !is_array($replay['teams'])) {
+            $replay['teams'] = [
+                'ally'  => $mk($allies, 'ally'),
+                'enemy' => $mk($enemies,'enemy'),
+            ];
+        } else {
+            if (!is_array($replay['teams']['ally'] ?? null))  $replay['teams']['ally']  = $mk($allies, 'ally');
+            if (!is_array($replay['teams']['enemy'] ?? null)) $replay['teams']['enemy'] = $mk($enemies,'enemy');
+        }
+
+        return $replay;
+    }
+
     private function mapRoleToClass(Hero $h): string
     {
         $label = mb_strtolower(trim($h->getRole()?->getNom() ?? ''));
         return match (true) {
-            str_contains($label, 'corps') || str_contains($label, 'cac') || $label === 'dps_melee'      => 'dps_melee',
+            str_contains($label, 'corps') || str_contains($label, 'cac') || $label === 'dps_melee'       => 'dps_melee',
             str_contains($label, 'distance') || str_contains($label, 'ranged') || $label === 'dps_ranged' => 'dps_ranged',
-            str_contains($label, 'tank') => 'tank',
+            str_contains($label, 'tank')    => 'tank',
             str_contains($label, 'heal') || str_contains($label, 'soin') => 'healer',
             default => 'dps_ranged',
         };
