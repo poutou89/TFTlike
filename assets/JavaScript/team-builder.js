@@ -19,15 +19,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const pickGrid  = document.getElementById('pick-grid');
   const benchGrid = document.getElementById('bench-grid');
   const board     = document.getElementById('board');
+  const itemsGrid = document.getElementById('items-grid');
   const btnReroll = document.getElementById('btn-reroll');
   const rerollCountEl = document.getElementById('reroll-count');
   const btnLock   = document.getElementById('btn-lock');
   const bonusList = document.getElementById('team-bonuses');
   const skeleton  = document.getElementById('search-skeleton');
+  // Floating drag label for items
+  let dragTip = null; const getDragTip = () => {
+    if (dragTip) return dragTip;
+    dragTip = document.createElement('div');
+    dragTip.className = 'drag-tip';
+    Object.assign(dragTip.style, {
+      position:'fixed', zIndex: 99999, pointerEvents:'none',
+      background:'rgba(26, 24, 44, 0.9)', color:'#fff', padding:'6px 10px',
+      borderRadius:'10px', border:'1px solid rgba(255,255,255,.2)',
+      boxShadow:'0 6px 20px rgba(0,0,0,.35)', fontSize:'12px',
+      transform:'translate(-50%, -140%)', whiteSpace:'nowrap'
+    });
+    document.body.appendChild(dragTip); return dragTip;
+  };
 
   const MAX_TEAM  = 4;
-  const placed    = new Map(); // "x,y" -> { girl, el }
+  const placed    = new Map(); // "x,y" -> { girl, el, itemId }
   const inBench   = new Map(); // girlId -> cardElement
+  const ALL_ITEMS = Array.isArray(window.ITEMS) ? window.ITEMS : [];
+  // Items: only 4 proposals at a time (no full catalog view here)
 
   // helpers
   const randInt = (n) => Math.floor(Math.random() * n);
@@ -39,6 +56,52 @@ document.addEventListener('DOMContentLoaded', () => {
     return out;
   };
   const cellKey = (x, y) => `${x},${y}`;
+  const choose4 = (arr) => {
+    if (!arr.length) return [];
+    if (arr.length <= 4) return [...arr];
+    const ids = new Set(); const out = [];
+    while (out.length < 4 && ids.size < arr.length) {
+      const i = randInt(arr.length);
+      if (!ids.has(i)) { ids.add(i); out.push(arr[i]); }
+    }
+    return out;
+  };
+
+  // ---- Items proposals (4 at a time) ----
+  let currentItems = choose4(ALL_ITEMS);
+  function renderItems() {
+    if (!itemsGrid) return;
+    // Always replace pre-rendered content to keep behavior consistent
+    itemsGrid.innerHTML = '';
+    if (!ALL_ITEMS.length) {
+      const empty = document.createElement('div');
+      empty.className = 'tb-items__empty';
+      empty.textContent = 'Ajoute des images dans public/images/items/';
+      itemsGrid.appendChild(empty);
+      return;
+    }
+    currentItems.forEach(it => {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'tb-item';
+      btn.setAttribute('data-item-id', it.id);
+      const title = it.desc ? `${it.name} — ${it.desc}` : it.name;
+      btn.setAttribute('title', title);
+      btn.draggable = true;
+      btn.innerHTML = `<img src="${fullImg(it.img)}" alt="${it.name}">`;
+      btn.addEventListener('dragstart', (e) => {
+        btn.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', JSON.stringify({ __type: 'item', id: it.id }));
+        const tip = getDragTip();
+        tip.textContent = `${it.name} → (dépose sur une héroïne)`;
+        tip.style.display = 'block';
+      });
+      btn.addEventListener('dragend', () => {
+        btn.classList.remove('dragging');
+        if (dragTip) dragTip.style.display = 'none';
+      });
+      itemsGrid.appendChild(btn);
+    });
+  }
 
   // ---- UI renderers ----
   function renderCard(girl, { source }) {
@@ -92,12 +155,39 @@ document.addEventListener('DOMContentLoaded', () => {
     return card;
   }
 
-  function makeChip(girl) {
+  function makeChip(girl, itemId = null) {
     const chip = document.createElement('div');
     chip.className = `chip ${classTag(girl.class)}`;
     chip.title = girl.name;
     chip.draggable = true;
-    chip.innerHTML = `<img src="${fullImg(girl.img)}" alt="${girl.name}"><span>${girl.name}</span>`;
+    chip.innerHTML = `
+      <img class="chip-avatar" src="${fullImg(girl.img)}" alt="${girl.name}">
+      <span class="chip-name">${girl.name}</span>
+      <span class="chip-item"></span>
+    `;
+
+    const holder = chip.querySelector('.chip-item');
+    if (itemId) {
+      const item = (window.ITEMS || []).find(i => String(i.id) === String(itemId));
+      if (item && holder) {
+        const tip = item.desc ? `${item.name} — ${item.desc}` : item.name;
+        holder.innerHTML = `<img class="chip-item-img" src="${fullImg(item.img)}" alt="${item.name}" title="${tip}">`;
+      }
+    }
+
+    // Click on the item icon to unequip (doesn't remove the unit)
+    if (holder) {
+      holder.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const cell = chip.parentElement?.closest('.cell');
+        if (!cell) return;
+        const key = cellKey(cell.dataset.x, cell.dataset.y);
+        const slot = placed.get(key);
+        if (!slot) return;
+        slot.itemId = null;
+        holder.innerHTML = '';
+      });
+    }
 
     chip.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', JSON.stringify(girl));
@@ -105,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
 
-    chip.addEventListener('click', () => {
+  chip.addEventListener('click', () => {
       const cell = chip.parentElement?.closest('.cell');
       if (cell) {
         const key = cellKey(cell.dataset.x, cell.dataset.y);
@@ -143,6 +233,7 @@ function renderPick() {
     const i = Math.floor(Math.random() * pool2.length);
     if (!taken.has(i)) { taken.add(i); picks.push(pool2[i]); }
   }
+
   picks.forEach(g => pickGrid.appendChild(renderCard(g, { source: 'pick' })));
 }
   function classTag(cls) {
@@ -174,10 +265,13 @@ function renderPick() {
     const { x, y } = cell.dataset;
     const key = cellKey(x, y);
 
-    const dragging = document.querySelector('.tb-card.dragging, .chip.dragging');
+  const dragging = document.querySelector('.tb-card.dragging, .chip.dragging, .tb-item.dragging');
     if (!dragging) return;
-
-    const girl = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
+  const dt = e.dataTransfer;
+  const payload = dt.getData('text/plain') || '{}';
+  let girl = {};
+  try { girl = JSON.parse(payload); } catch {}
+  if (girl && girl.__type === 'item') return; // let the item handler manage it
 
     // si même héro déjà placé ailleurs -> libère l’ancienne cellule
     for (const [k, v] of placed) {
@@ -201,10 +295,10 @@ function renderPick() {
       placed.delete(key);
     }
 
-    const chip = makeChip(girl);
+  const chip = makeChip(girl);
     cell.innerHTML = '';
     cell.appendChild(chip);
-    placed.set(key, { girl, el: chip });
+  placed.set(key, { girl, el: chip, itemId: null });
     updateLockState();
   });
 
@@ -232,6 +326,42 @@ function renderPick() {
     updateLockState();
   });
 
+  // ---- Items drag & drop ----
+  // Note: individual item buttons attach their own drag handlers in renderItems()
+
+  board.addEventListener('drop', (e) => {
+    // handle item drops onto chips
+    const payload = e.dataTransfer.getData('text/plain') || '';
+    if (!payload) return; // handled above for heroes too
+    let data; try { data = JSON.parse(payload); } catch { data = null; }
+    if (!data || data.__type !== 'item') return;
+    const cell = e.target.closest('.cell'); if (!cell) return;
+    const key = cellKey(cell.dataset.x, cell.dataset.y);
+    const slot = placed.get(key); if (!slot) return;
+    // assign item (replace any existing)
+    slot.itemId = data.id;
+    const chip = slot.el;
+    const holder = chip.querySelector('.chip-item');
+    const item = (window.ITEMS || []).find(i => String(i.id) === String(data.id));
+    if (holder && item) {
+      const tip = item.desc ? `${item.name} — ${item.desc}` : item.name;
+  holder.innerHTML = `<img class="chip-item-img" src="${fullImg(item.img)}" alt="${item.name}" title="${tip}">`;
+  const img = holder.querySelector('.chip-item-img');
+  if (img) { img.classList.add('flash'); setTimeout(()=> img.classList.remove('flash'), 600); }
+    }
+    if (dragTip && item) {
+      dragTip.textContent = `${item.name} → ${slot.girl.name}`;
+      setTimeout(()=>{ if(dragTip) dragTip.style.display = 'none'; }, 850);
+    }
+  });
+
+  // Track pointer to position drag tip
+  document.addEventListener('dragover', (e) => {
+    if (!dragTip || dragTip.style.display !== 'block') return;
+    dragTip.style.left = `${e.clientX}px`;
+    dragTip.style.top  = `${e.clientY}px`;
+  });
+
   // ---- actions ----
 let ticketId = null;
 let pollTimer = null;
@@ -241,7 +371,8 @@ btnLock.addEventListener('click', async () => {
   // build payload
   const lineup = Array.from(placed.entries()).map(([key, val]) => {
     const [x, y] = key.split(',').map(Number);
-    return { id: val.girl.id, x, y };
+  const itemId = val.itemId ?? null;
+  return itemId ? { id: val.girl.id, x, y, item: String(itemId) } : { id: val.girl.id, x, y };
   });
 
   const START_URL  = window.MM?.start  ?? '/matchmaking/start';
@@ -361,6 +492,7 @@ btnLock.addEventListener('click', async () => {
 
   // init
   renderPick();
+  renderItems();
   renderBonuses();
 
   // --- Reroll limité à 3 ---
@@ -379,7 +511,10 @@ btnLock.addEventListener('click', async () => {
         rerollsLeft = Number(data?.left ?? rerollsLeft);
       } catch {}
       updateRerollUI();
-      renderPick(); // pas de reload -> pas de clignotement
+  renderPick(); // personnages
+  // also refresh the 4 item proposals
+  currentItems = choose4(ALL_ITEMS);
+  renderItems();
     });
   }
 });

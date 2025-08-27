@@ -37,7 +37,7 @@ class MatchmakingController extends AbstractController
             ->setLineup($lineup)
             ->setStatus('queued');
 
-        foreach ($lineup as $slot) {
+    foreach ($lineup as $slot) {
             $heroId = $slot['id'] ?? $slot['hero_id'] ?? null;
             if ($heroId && ($hero = $em->getRepository(Hero::class)->find((int)$heroId))) {
                 $team->addHero($hero);

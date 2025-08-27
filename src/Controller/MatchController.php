@@ -122,8 +122,8 @@ final class MatchController extends AbstractController
         $byId   = [];
         foreach ($heroes as $h) $byId[$h->getId()] = $h;
 
-        $out = [];
-        foreach ($slots as $s) {
+    $out = [];
+    foreach ($slots as $s) {
             $hid = (int)($s['id'] ?? 0);
             if (!$hid || !isset($byId[$hid])) continue;
 
@@ -152,6 +152,7 @@ final class MatchController extends AbstractController
                 'dodge'  => $dodge,
                 'x'      => $x,
                 'y'      => $y,
+                'item'   => isset($s['item']) ? (string)$s['item'] : null,
             ];
         }
         return $out;

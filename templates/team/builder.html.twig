@@ -13,6 +13,23 @@
   <div class="tb-layout">
     <!-- Colonne gauche : tirage & banc -->
     <aside class="tb-sidebar">
+      <div class="tb-items">
+        <div class="tb-items__head">
+          <h2>Objets</h2>
+          <small>Glisse un objet sur une héroïne (1 objet max)</small>
+          <div class="tb-items__actions" style="margin-left:auto; display:flex; gap:.4rem; align-items:center;">
+          </div>
+        </div>
+        <div class="tb-items__grid" id="items-grid">
+          {% for it in items|slice(0,4) %}
+            <button class="tb-item" type="button" data-item-id="{{ it.id }}" draggable="true" title="{{ it.name }} — {{ it.desc|default('') }}">
+              <img src="{{ asset(it.img) }}" alt="{{ it.name }}" loading="lazy">
+            </button>
+          {% else %}
+            <div class="tb-items__empty">Ajoute des images dans public/images/items/</div>
+          {% endfor %}
+        </div>
+      </div>
       <div class="tb-pick">
         <div class="tb-pick__head">
           <h2>Tirage</h2>
@@ -102,6 +119,7 @@
 </script>
 <script>
   window.ASSET_BASE = "{{ asset('') }}";  // <-- racine ("/"), plus "images/mg/"
+  window.ITEMS = {{ items|json_encode()|raw }};
   window.MM = {
     start:  "{{ path('matchmaking_start') }}",                  // e.g. /matchmaking/start
     status: "{{ path('matchmaking_status', {ticketId:'__ID__'}) }}",  // we replace __ID__ in JS

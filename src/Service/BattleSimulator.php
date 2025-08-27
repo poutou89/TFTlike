@@ -4,6 +4,7 @@ namespace App\Service;
 use App\Entity\Team;
 use App\Entity\Hero;
 use App\Repository\HeroRepository;
+use App\Service\ItemCatalog;
 
 final class BattleSimulator
 {
@@ -90,6 +91,23 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
     $E = $this->packFromLineup($enemyTeam, 'enemy', 200000);
 
     $units   = $this->sanitizeUnits(array_merge($A, $E));
+    // Apply item passives at battle start
+    foreach ($units as &$u) {
+        if (!is_array($u)) continue;
+        $itemId = $u['item'] ?? null; if (!$itemId) continue;
+        $it = ItemCatalog::get((string)$itemId); if (!$it) continue;
+        $p = $it['passive'] ?? [];
+        if (isset($p['hp_mul']))    { $u['maxHp'] = (int)round($u['maxHp'] * (float)$p['hp_mul']); $u['hp'] = min($u['maxHp'], (int)$u['hp']); }
+        if (isset($p['atk_add']))   { $u['atk']   = max(1, (int)$u['atk'] + (int)$p['atk_add']); }
+        if (isset($p['armor_add'])) { $u['armor'] = max(0, (int)($u['armor'] ?? 0) + (int)$p['armor_add']); }
+        if (isset($p['shield_add'])){ $u['shield']= max(0, (int)$u['shield'] + (int)$p['shield_add']); }
+        if (isset($p['mana_add']))  { $u['mana']  = min(100, (int)$u['mana'] + (int)$p['mana_add']); }
+        if (isset($p['acc_add']))   { $u['acc']   = min(1.00, (float)$u['acc'] + (float)$p['acc_add']); }
+    if (isset($p['crit_add']))  { $u['crit']  = min(0.50, (float)$u['crit'] + (float)$p['crit_add']); }
+        if (isset($p['dodge_add'])) { $u['dodge'] = min(0.50, (float)$u['dodge'] + (float)$p['dodge_add']); }
+    if (isset($p['aspd_add']))  { $u['aspd']  = max(0.0, min(0.50, (float)($u['aspd'] ?? 0) + (float)$p['aspd_add'])); }
+    }
+    unset($u);
     $actions = [];
     $this->applyFamilySynergies($units, $actions);
     $initial = $this->snapshot($units);
@@ -276,6 +294,24 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
                     if ($left > 0) $units[$foeI]['hp'] = max(0, (int)$units[$foeI]['hp'] - $left);
                 }
 
+                // on-hit effects from item
+                if (!empty($me['item'])) {
+                    $it = ItemCatalog::get((string)$me['item']);
+                    if ($it && !empty($it['on_hit'])) {
+                        $oh = $it['on_hit'];
+                        if (isset($oh['true_dmg'])) {
+                            $extra = (int)$oh['true_dmg'];
+                            $units[$foeI]['hp'] = max(0, (int)$units[$foeI]['hp'] - $extra);
+                            $actions[] = ['t'=>'log','msg'=>sprintf('%s inflige %d vrais dégâts via son objet', $me['name'], $extra)];
+                        }
+                        if (isset($oh['armor_down'])) {
+                            $debuff = (int)$oh['armor_down'];
+                            $units[$foeI]['armor'] = max(0, (int)($units[$foeI]['armor'] ?? 0) - $debuff);
+                            $actions[] = ['t'=>'log','msg'=>sprintf("L'armure de %s est réduite de %d par l'objet de %s", $foe['name'], $debuff, $me['name'])];
+                        }
+                    }
+                }
+
                 $me['mana'] = min(100, (int)$me['mana'] + 5);
 
                 $actions[] = [
@@ -285,6 +321,30 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
                     'mana'=>$me['mana'],
                     'log'=> sprintf('%s frappe %s (%d%s)', $me['name'],$foe['name'],$dmg,$crit?' crit':''),
                 ];
+
+                // Attack speed: chance for an immediate bonus basic hit
+                $aspd = (float)($me['aspd'] ?? 0);
+                if ($aspd > 0 && $rng->chance(min(0.50, max(0.0, $aspd)))) {
+                    $bonus = max(1, (int)round(($me['atk'] ?? 1) * 0.6));
+                    // Apply shield/armor again for the bonus hit
+                    $left2 = $bonus;
+                    if ((int)$units[$foeI]['shield'] > 0) {
+                        $abs2 = min((int)$units[$foeI]['shield'], $left2);
+                        $units[$foeI]['shield'] -= $abs2; $left2 -= $abs2;
+                    }
+                    if ($left2 > 0) {
+                        $arm2 = max(0, (int)($units[$foeI]['armor'] ?? 0));
+                        $left2 = max(0, $left2 - $arm2);
+                        if ($left2 > 0) $units[$foeI]['hp'] = max(0, (int)$units[$foeI]['hp'] - $left2);
+                    }
+                    $actions[] = [
+                        't'=>'attack','att'=>$me['id'],'def'=>$foe['id'],
+                        'crit'=>false,'dmg'=>$bonus,
+                        'hp'=>$units[$foeI]['hp'],'shield'=>$units[$foeI]['shield'],
+                        'mana'=>$me['mana'],
+                        'log'=> sprintf('%s enchaîne une attaque rapide (+%d)', $me['name'],$bonus),
+                    ];
+                }
             } else {
                 // Move towards foe (horizontal first)
                 $dx = ($me['x'] < $foe['x']) ? 1 : (($me['x'] > $foe['x']) ? -1 : 0);
@@ -466,6 +526,7 @@ private function packFromLineup(Team $team, string $side, int $uidBase): array
             'armor' =>$baseArmor,
             'acc'=>$acc,'crit'=>$crit,'dodge'=>$dodge,
             'x'=>$x,'y'=>$y,
+            'item'=> isset($slot['item']) ? (string)$slot['item'] : null,
         ];
     }
     return $out;
