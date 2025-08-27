@@ -68,6 +68,21 @@
     window.SFX_HEAL_CRIT_URL   = "{{ asset('audio/heal_crit.mp3') }}";
     window.SFX_HALFHP_URL      = "{{ asset('audio/half_hp.mp3') }}";
     window.SFX_DEATH_URL       = "{{ asset('audio/death.mp3') }}";
+    // Special FX GIFs: place your files in public/images/fx/ with these names
+    window.FX_URLS = {
+      healer_blessing:  "{{ asset('images/fx/healer_blessing.gif') }}",
+      melee_brise:      "{{ asset('images/fx/melee_brise.gif') }}",
+      ranged_soleil:    "{{ asset('images/fx/ranged_soleil.gif') }}",
+      ranged_lune:      "{{ asset('images/fx/ranged_lune.gif') }}",
+      ranged_nature:    "{{ asset('images/fx/ranged_nature.gif') }}",
+      ranged_idole:     "{{ asset('images/fx/ranged_idole.gif') }}",
+      ranged_ombre:     "{{ asset('images/fx/ranged_ombre.gif') }}",
+      ranged_arcane:    "{{ asset('images/fx/ranged_arcane.gif') }}",
+      ranged_etoile:    "{{ asset('images/fx/ranged_etoile.gif') }}",
+      ranged_ocean:     "{{ asset('images/fx/ranged_ocean.gif') }}",
+      tank_rempart:     "{{ asset('images/fx/tank_rempart.gif') }}",
+      default:          "{{ asset('images/fx/default.gif') }}"
+    };
   </script>
 {% endblock %}
 {# templates/match/show.html.twig #}

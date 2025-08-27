@@ -115,6 +115,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyAction(a){
     switch(a.t){
+      case 'fx': {
+        try{
+          const at = Array.isArray(a.at) ? a.at : null; if(!at) break;
+          const c = cell(at[0], at[1]); if(!c) break;
+          const kind = a.kind || 'default';
+          const url = (window.FX_URLS && window.FX_URLS[kind]) || (window.FX_URLS && window.FX_URLS.default);
+          if(!url) break;
+          const fx = document.createElement('div'); fx.className = 'fx fx--'+kind;
+          const img = document.createElement('img'); img.alt = kind; img.src = full(url);
+          fx.appendChild(img); c.appendChild(fx);
+          const dur = Math.max(200, Math.min(4000, parseInt(a.dur||1000,10)));
+          setTimeout(()=>{ fx.remove(); }, dur);
+        }catch{ /* ignore */ }
+        break;
+      }
       case 'move': {
         const u=unitsById.get(a.id); if(!u)break;
         const to=cell(a.to[0],a.to[1]); if(!to)break;

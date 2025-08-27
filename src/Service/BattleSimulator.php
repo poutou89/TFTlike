@@ -114,6 +114,9 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
         return $bestI;
     };
 
+    // Family composition counts used for some passive bonuses
+    $counts = $this->countFamilies($units);
+
     for ($tick = 0; $tick < $tickMax; $tick++) {
         if (!$this->hasAlive($units, 'ally') || !$this->hasAlive($units, 'enemy')) break;
 
@@ -122,47 +125,120 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
 
             $extraRegen = 0;
             $fam = strtolower((string)($me['family'] ?? ''));
-            if ($fam === 'lune'   && ($counts['ally']['lune']   ?? 0) >= 3 && $me['team']==='ally')  $extraRegen += 1;
-            if ($fam === 'ocean'  && ($counts['ally']['ocean']  ?? 0) >= 3 && $me['team']==='ally') $extraRegen += 1;
-            // idem pour enemy avec les bons counts
+            $teamCounts = $counts[$me['team']] ?? [];
+            if ($fam === 'lune'   && (($teamCounts['lune']  ?? 0)  >= 3)) $extraRegen += 1;
+            if ($fam === 'ocean'  && (($teamCounts['ocean'] ?? 0) >= 3)) $extraRegen += 1;
             $me['mana'] = min(100, (int)$me['mana'] + (($me['class'] ?? '') === 'healer' ? 10 : 3) + $extraRegen);
+
+            // --- 50 mana skill cast (consumes the unit's turn) ---
+            if ((int)$me['mana'] >= 50) {
+                $me['mana'] = 0;
+                $cls = $me['class'] ?? '';
+                // helper to deal damage with shield and armor
+                $applyHit = function(int $srcI, int $dstI, int $dmg, bool $trueDamage=false) use (&$units, &$actions, $me) {
+                    $left = $dmg;
+                    if (!$trueDamage) {
+                        if ((int)$units[$dstI]['shield'] > 0) {
+                            $abs = min((int)$units[$dstI]['shield'], $left);
+                            $units[$dstI]['shield'] -= $abs; $left -= $abs;
+                        }
+                        $arm = max(0, (int)($units[$dstI]['armor'] ?? 0));
+                        $left = max(0, $left - $arm);
+                    }
+                    if ($left > 0) { $units[$dstI]['hp'] = max(0, (int)$units[$dstI]['hp'] - $left); }
+                    $actions[] = [
+                        't'=>'attack','att'=>$units[$srcI]['id'],'def'=>$units[$dstI]['id'],
+                        'crit'=>false,'dmg'=>$dmg,
+                        'hp'=>$units[$dstI]['hp'],'shield'=>$units[$dstI]['shield'],
+                        'mana'=>$me['mana'],
+                    ];
+                };
+
+                if ($cls === 'healer') {
+                    // Big heal: lowest %HP ally within 2 cells
+                    $targetI = null; $worst = 2.0;
+                    foreach ($units as $j => $u) {
+                        if (!is_array($u)) continue;
+                        if (($u['team'] ?? null) !== ($me['team'] ?? null)) continue;
+                        if (($u['hp'] ?? 0) <= 0) continue;
+                        if (($u['hp'] ?? 0) >= ($u['maxHp'] ?? 0)) continue;
+                        if (!isset($u['x'],$u['y'])) continue;
+                        if (abs($me['x'] - $u['x']) + abs($me['y'] - $u['y']) > 2) continue;
+                        $ratio = ($u['maxHp'] ?? 1) > 0 ? ($u['hp'] / $u['maxHp']) : 1;
+                        if ($ratio < $worst) { $worst = $ratio; $targetI = $j; }
+                    }
+                    if ($targetI !== null) {
+                        $amount = max(20, (int)round(0.6 * (int)($me['atk'] ?? 0) + 0.20 * (int)($units[$targetI]['maxHp'] ?? 0)));
+                        $units[$targetI]['hp'] = min((int)$units[$targetI]['maxHp'], (int)$units[$targetI]['hp'] + $amount);
+                        // FX on the healed ally's cell
+                        if (isset($units[$targetI]['x'],$units[$targetI]['y'])) {
+                            $actions[] = ['t'=>'fx','kind'=>'healer_blessing','at'=>[(int)$units[$targetI]['x'], (int)$units[$targetI]['y']], 'dur'=>1100];
+                        }
+                        $actions[] = [
+                            't'=>'heal','src'=>$me['id'],'dst'=>$units[$targetI]['id'],
+                            'amount'=>$amount,'mana'=>$me['mana'],
+                            'crit'=>true,
+                            'log'=> sprintf('%s lance Grande Bénédiction sur %s (+%d)', $me['name'],$units[$targetI]['name'],$amount),
+                        ];
+                        continue;
+                    }
+                } elseif ($cls === 'dps_melee') {
+                    // Heavy strike with guaranteed crit style damage
+                    $foeI = $nearestEnemyIdx($me, $units);
+                    if ($foeI !== null) {
+                        $dmg = (int)round(2.0 * (int)($me['atk'] ?? 0));
+                        // FX on the target cell
+                        if (isset($units[$foeI]['x'],$units[$foeI]['y'])) {
+                            $actions[] = ['t'=>'fx','kind'=>'melee_brise','at'=>[(int)$units[$foeI]['x'], (int)$units[$foeI]['y']], 'dur'=>900];
+                        }
+                        $applyHit($i, $foeI, $dmg, false);
+                        $actions[] = ['t'=>'log','msg'=>sprintf('%s utilise Brise-Guardes sur %s (%d)', $me['name'],$units[$foeI]['name'],$dmg)];
+                        continue;
+                    }
+                } elseif ($cls === 'dps_ranged') {
+                    // Family-based shot to nearest enemy within 3
+                    $foeI = $nearestEnemyIdx($me, $units);
+                    if ($foeI !== null && (abs($me['x'] - $units[$foeI]['x']) + abs($me['y'] - $units[$foeI]['y'])) <= 3) {
+                        $famName = strtolower((string)($me['family'] ?? ''));
+                        $base = (int)($me['atk'] ?? 0);
+                        $log = '';
+                        switch ($famName) {
+                            case 'soleil': $dmg = (int)round(1.3 * $base); $log = sprintf('%s lance Rayon Solaire (%d)', $me['name'],$dmg); if(isset($units[$foeI]['x'],$units[$foeI]['y'])) $actions[]=['t'=>'fx','kind'=>'ranged_soleil','at'=>[(int)$units[$foeI]['x'],(int)$units[$foeI]['y']],'dur'=>900]; $applyHit($i,$foeI,$dmg,false); break;
+                            case 'lune':   $dmg = (int)round(1.1 * $base); $log = sprintf('%s lance Éclat Lunaire (%d)', $me['name'],$dmg); if(isset($units[$foeI]['x'],$units[$foeI]['y'])) $actions[]=['t'=>'fx','kind'=>'ranged_lune','at'=>[(int)$units[$foeI]['x'],(int)$units[$foeI]['y']],'dur'=>900]; $applyHit($i,$foeI,$dmg,false); break;
+                            case 'nature': $dmg = (int)round(1.2 * $base); $log = sprintf('%s invoque Vigne Entravante (%d)', $me['name'],$dmg); if(isset($units[$foeI]['x'],$units[$foeI]['y'])) $actions[]=['t'=>'fx','kind'=>'ranged_nature','at'=>[(int)$units[$foeI]['x'],(int)$units[$foeI]['y']],'dur'=>1000]; $applyHit($i,$foeI,$dmg,false); break;
+                            case 'idole':  $dmg = (int)round(0.9 * $base); $log = sprintf('%s chante Encore! (%d)', $me['name'],$dmg); if(isset($me['x'],$me['y'])) $actions[]=['t'=>'fx','kind'=>'ranged_idole','at'=>[(int)$me['x'],(int)$me['y']],'dur'=>1100]; $applyHit($i,$foeI,$dmg,false);
+                                // small team mana push
+                                foreach ($units as &$u2) { if (is_array($u2) && ($u2['team'] ?? '') === ($me['team'] ?? '')) { $u2['mana'] = min(100,(int)($u2['mana'] ?? 0) + 10); } }
+                                unset($u2);
+                                break;
+                            case 'ombre':  $dmg = (int)round(1.0 * $base); $log = sprintf('%s frappe depuis les Ombres (%d vrais dégâts)', $me['name'],$dmg); if(isset($units[$foeI]['x'],$units[$foeI]['y'])) $actions[]=['t'=>'fx','kind'=>'ranged_ombre','at'=>[(int)$units[$foeI]['x'],(int)$units[$foeI]['y']],'dur'=>850]; $applyHit($i,$foeI,$dmg,true); break;
+                            case 'arcane': $dmg = (int)round(1.4 * $base); $log = sprintf('%s projette un Orbe Arcanique (%d)', $me['name'],$dmg); if(isset($units[$foeI]['x'],$units[$foeI]['y'])) $actions[]=['t'=>'fx','kind'=>'ranged_arcane','at'=>[(int)$units[$foeI]['x'],(int)$units[$foeI]['y']],'dur'=>900]; $applyHit($i,$foeI,$dmg,false); break;
+                            case 'etoile': $dmg = (int)round(0.8 * $base); $log = sprintf('%s déclenche une Pluie d’Étoiles (%d)', $me['name'],$dmg); if(isset($units[$foeI]['x'],$units[$foeI]['y'])) $actions[]=['t'=>'fx','kind'=>'ranged_etoile','at'=>[(int)$units[$foeI]['x'],(int)$units[$foeI]['y']],'dur'=>1100];
+                                // hit target and adjacent enemies (Manhattan <=1)
+                                foreach ($units as $j => $u2) { if (!is_array($u2)) continue; if (($u2['team'] ?? '') === ($me['team'] ?? '')) continue; if (($u2['hp'] ?? 0) <= 0) continue; if (abs($units[$foeI]['x'] - $u2['x']) + abs($units[$foeI]['y'] - $u2['y']) <= 1) { $applyHit($i,$j,$dmg,false); } }
+                                break;
+                            case 'ocean':  $dmg = (int)round(1.0 * $base); $log = sprintf('%s libère une Vague (%d) et gagne un bouclier', $me['name'],$dmg); if(isset($units[$foeI]['x'],$units[$foeI]['y'])) $actions[]=['t'=>'fx','kind'=>'ranged_ocean','at'=>[(int)$units[$foeI]['x'],(int)$units[$foeI]['y']],'dur'=>900]; $me['shield'] = (int)($me['shield'] ?? 0) + 10; $applyHit($i,$foeI,$dmg,false); break;
+                            default:       $dmg = (int)round(1.15 * $base); $log = sprintf('%s utilise Tir de précision (%d)', $me['name'],$dmg); $applyHit($i,$foeI,$dmg,false); break;
+                        }
+                        if ($log) { $actions[] = ['t'=>'log','msg'=>$log]; }
+                        continue;
+                    }
+                } elseif ($cls === 'tank') {
+                    // Temporary armor buff +5
+                    $me['armor'] = (int)($me['armor'] ?? 0) + 5;
+                    if (isset($me['x'],$me['y'])) {
+                        $actions[] = ['t'=>'fx','kind'=>'tank_rempart','at'=>[(int)$me['x'], (int)$me['y']], 'dur'=>1000];
+                    }
+                    $actions[] = ['t'=>'log','msg'=>sprintf('%s active Rempart (+5 armure)', $me['name'])];
+                    continue;
+                }
+                // If no skill executed, fall through to normal behaviour
+            }
 
 
             // --- Healer behaviour ---
             if (($me['class'] ?? '') === 'healer') {
-                // lowest % HP ally within 2 cells
-                $targetI = null; $worst = 2.0;
-                foreach ($units as $j => $u) {
-                    if (!is_array($u)) continue;
-                    if (($u['team'] ?? null) !== ($me['team'] ?? null)) continue;
-                    if (($u['hp'] ?? 0) <= 0) continue;
-                    if (($u['hp'] ?? 0) >= ($u['maxHp'] ?? 0)) continue;
-                    if (!isset($u['x'],$u['y'])) continue;
-                    if ($dist($me, $u) > 2) continue;
-                    $ratio = ($u['maxHp'] ?? 1) > 0 ? ($u['hp'] / $u['maxHp']) : 1;
-                    if ($ratio < $worst) { $worst = $ratio; $targetI = $j; }
-                }
-
-                // Heal if possible
-                if ($targetI !== null && (int)$me['mana'] >= 20) {
-                    $amount = max(10, (int)round(0.6 * (int)($me['atk'] ?? 0)));
-                    $me['mana'] -= 20;
-                    $units[$targetI]['hp'] = min((int)$units[$targetI]['maxHp'], (int)$units[$targetI]['hp'] + $amount);
-                    $actions[] = [
-                        't'=>'heal','src'=>$me['id'],'dst'=>$units[$targetI]['id'],
-                        'amount'=>$amount,'mana'=>$me['mana'],
-                        'log'=> sprintf('%s soigne %s (+%d)', $me['name'],$units[$targetI]['name'],$amount),
-                    ];
-                    continue;
-                }
-
-                // Not enough mana → meditate
-                if ((int)$me['mana'] < 20) {
-                    $me['mana'] = min(100, (int)$me['mana'] + 25);
-                    $actions[] = ['t'=>'log','msg'=>sprintf('%s se concentre (+25 mana)', $me['name'])];
-                    continue;
-                }
-                // else: fall-through → light attack below
+                // Healers no longer micro-heal; they build to 50 mana for a big heal. Fall through to light attack below.
             }
 
             // --- Combat / move ---
@@ -182,7 +258,6 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
                 if (($me['class'] ?? '') === 'healer') $dmg = (int)max(1, round($dmg * 0.5)); // light hit
                 $crit = $rng->chance($me['crit']);
                 if ($crit) $dmg = (int)round($dmg * 1.5);
-                if (($foe['class'] ?? '') === 'tank') $dmg = (int)round($dmg * 0.8);
 
                 // shield first
                 $left = $dmg;
@@ -191,7 +266,12 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
                     $units[$foeI]['shield'] -= $abs;
                     $left -= $abs;
                 }
-                if ($left > 0) $units[$foeI]['hp'] = max(0, (int)$units[$foeI]['hp'] - $left);
+                // armor mitigation
+                if ($left > 0) {
+                    $arm = max(0, (int)($units[$foeI]['armor'] ?? 0));
+                    $left = max(0, $left - $arm);
+                    if ($left > 0) $units[$foeI]['hp'] = max(0, (int)$units[$foeI]['hp'] - $left);
+                }
 
                 $me['mana'] = min(100, (int)$me['mana'] + 5);
 
@@ -269,6 +349,7 @@ private function snapshot(array $units): array
             'acc'    => (float)($u['acc'] ?? 0),
             'crit'   => (float)($u['crit'] ?? 0),
             'dodge'  => (float)($u['dodge'] ?? 0),
+            'armor'  => (int)($u['armor'] ?? 0),
             'x'      => (int)$u['x'],
             'y'      => (int)$u['y'],
             'maxHp'  => (int)$u['maxHp'],
@@ -331,16 +412,33 @@ private function packFromLineup(Team $team, string $side, int $uidBase): array
 
         $uid = $uidBase + ($i++);
 
+        $cls = $this->mapRoleToClass($h);
+        $baseHp = (int)($h->getPdv() ?? 1);
+        $hpMul = match ($cls) {
+            'tank' => 1.30,
+            'dps_melee' => 1.05,
+            'dps_ranged' => 0.92,
+            'healer' => 1.00,
+            default => 1.00,
+        };
+        $adjHp = max(1, (int)round($baseHp * $hpMul));
+        $baseArmor = match ($cls) {
+            'tank' => 3,
+            'dps_melee' => 1,
+            default => 0,
+        };
+
         $out[] = [
             'id'=>$uid,'hid'=>$h->getId(),'team'=>$side,'name'=>$h->getNom(),
             'img'=>$this->resolveImagePath($h->getPicture()),
-            'class'=>$this->mapRoleToClass($h),
+            'class'=>$cls,
             'family'=>$h->getFamily() ?? ($h->getFamilyId()?->getNom() ?? ''),
-            'maxHp'=>(int)($h->getPdv() ?? 1),
-            'hp'   =>(int)($h->getPdv() ?? 1),
+            'maxHp'=>$adjHp,
+            'hp'   =>$adjHp,
             'atk'  =>(int)($h->getAtk() ?? 1),
             'shield'=>(int)($h->getShield() ?? 0),
-            'mana'  =>(int)($h->getMana() ?? 0),
+            'mana'  =>0,
+            'armor' =>$baseArmor,
             'acc'=>$acc,'crit'=>$crit,'dodge'=>$dodge,
             'x'=>$x,'y'=>$y,
         ];
@@ -361,10 +459,12 @@ private function packFromLineup(Team $team, string $side, int $uidBase): array
             $u['hp']     = max(1, min($u['maxHp'], (int)($u['hp'] ?? $u['maxHp'])));
             $u['atk']    = max(1, (int)($u['atk']    ?? 1));
             $u['shield'] = max(0, (int)($u['shield'] ?? 0));
-            $u['mana']   = max(0, min(100, (int)($u['mana']   ?? 0)));
+            // Start at 0 mana for all units; build up during fight
+            $u['mana']   = 0;
             $u['acc']    = max(0.50, min(1.00, (float)($u['acc']  ?? 0.85))); // 50..100%
             $u['crit']   = max(0.00, min(0.30, (float)($u['crit'] ?? 0.10)));
             $u['dodge']  = max(0.00, min(0.15, (float)($u['dodge']?? 0.05)));
+            $u['armor']  = max(0, (int)($u['armor'] ?? 0));
             $out[] = $u;
         }
         return array_values($out);
