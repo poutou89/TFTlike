@@ -64,7 +64,7 @@ class Hero
     private ?string $family = null;
 
     // IMPORTANT : la colonne réelle en base est `family_id_id`
-    #[ORM\ManyToOne(targetEntity: Family::class)]
+    #[ORM\ManyToOne(targetEntity: Family::class, inversedBy: 'hero_id')]
     #[ORM\JoinColumn(name: 'family_id_id', referencedColumnName: 'id', nullable: true)]
     private ?Family $family_id = null;
 

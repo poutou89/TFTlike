@@ -14,7 +14,7 @@ class TeamHero
     #[ORM\JoinColumn(name: 'team_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private ?Team $team = null;
 
-    #[ORM\ManyToOne(targetEntity: Hero::class)]
+    #[ORM\ManyToOne(targetEntity: Hero::class, inversedBy: 'teamLinks')]
     #[ORM\JoinColumn(name: 'hero_id', referencedColumnName: 'id', nullable: false)]
     private ?Hero $hero = null;
 
