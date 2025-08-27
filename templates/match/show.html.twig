@@ -11,6 +11,7 @@
       <button class="btn btn-primary" id="btn-start">▶ Démarrer</button>
       <button class="btn btn-ghost"   id="btn-pause">⏸ Pause</button>
         <button class="btn btn-ghost"   id="btn-reset">↺ Reset</button>
+  <button class="btn btn-ghost"   id="btn-music" aria-pressed="false" title="Activer/Désactiver la musique">🎶 Musique</button>
     </div>
   </header>
 
@@ -59,6 +60,15 @@
   <script id="enemies-json" type="application/json">{{ enemies |json_encode()|raw }}</script>
   <script>window.ASSET_BASE = "{{ asset('') }}";</script>
   <script id="replay-json" type="application/json">{{ replay|json_encode()|raw }}</script>
+  <script>window.BGM_URL = "{{ asset('audio/battle_theme.mp3') }}";</script>
+  <script>window.SFX_VICTORY_URL = "{{ asset('audio/victory.mp3') }}";</script>
+  <script>
+    window.SFX_DEFEAT_URL      = "{{ asset('audio/defeat.mp3') }}";
+    window.SFX_HEAL_URL        = "{{ asset('audio/heal.mp3') }}";
+    window.SFX_HEAL_CRIT_URL   = "{{ asset('audio/heal_crit.mp3') }}";
+    window.SFX_HALFHP_URL      = "{{ asset('audio/half_hp.mp3') }}";
+    window.SFX_DEATH_URL       = "{{ asset('audio/death.mp3') }}";
+  </script>
 {% endblock %}
 {# templates/match/show.html.twig #}
 {% block javascripts %}
