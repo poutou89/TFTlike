@@ -89,6 +89,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const hp=u.el.querySelector('.hp'); if(hp){ hp.textContent = u.hp; }
     const sh=u.el.querySelector('.shield'); if(sh){ sh.textContent=u.shield; sh.style.display=u.shield>0?'':'none'; }
     const ma=u.el.querySelector('.mana');   if(ma){ ma.textContent=u.mana;   ma.style.display=u.mana>0?'':'none'; }
+    // Per-unit bars on the board
+    const hpFill = u.el.querySelector('.u-bar--hp > span');
+    const maFill = u.el.querySelector('.u-bar--mana > span');
+    if(hpFill){
+      const maxHp = Math.max(1, u.maxHp || u.hp || 1);
+      const curHp = Math.max(0, Math.min(maxHp, u.hp || 0));
+      hpFill.style.width = Math.round(100 * curHp / maxHp) + '%';
+    }
+    if(maFill){
+      const maxMana = 50;
+      const curMana = Math.max(0, Math.min(maxMana, u.mana || 0));
+      maFill.style.width = Math.round(100 * curMana / maxMana) + '%';
+    }
   }
 
   function updateTeamGauges(){
@@ -129,10 +142,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const u = {...u0};
       const el = document.createElement('div');
       el.className = `unit unit--${u.team} unit--${u.class}`;
-  // Image-only unit on the board; numeric badges are hidden in CSS for a clean look
-  el.innerHTML = `<img src="${full(u.img)}" alt="">`;
+  // Portrait with per-unit bars under it
+  el.innerHTML = `
+    <img src="${full(u.img)}" alt="">
+    <div class="u-bars">
+      <div class="u-bar u-bar--hp"><span></span></div>
+      <div class="u-bar u-bar--mana"><span></span></div>
+    </div>`;
       const c = cell(u.x, u.y); if (c) c.appendChild(el);
-      u.el = el; unitsById.set(u.id, u);
+      u.el = el; unitsById.set(u.id, u); updateBars(u);
     }
   renderHUD();
   updateTeamGauges();

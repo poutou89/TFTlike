@@ -105,6 +105,12 @@
       outline: 3px solid transparent;
       image-rendering: auto;
     }
+  /* per-unit bars below portrait */
+  .u-bars { position:absolute; left:50%; transform: translateX(-50%); bottom:6px; width: 82px; display:grid; gap:3px; z-index:5; }
+  .u-bar { position:relative; height:6px; background: rgba(0,0,0,.28); border-radius: 999px; overflow:hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+  .u-bar > span { position:absolute; inset:0 100% 0 0; border-radius: 999px; transition: width .22s ease; }
+  .u-bar--hp > span { background: linear-gradient(90deg, #8ef0ff, #ff9ad1); }
+  .u-bar--mana > span { background: linear-gradient(90deg, #a7b3ff, #d0a5ff); }
     &.unit--ally img  { outline-color: rgba(120,220,255,.7); }
     &.unit--enemy img { outline-color: rgba(255,120,180,.7); }
     &.ko img { opacity:.45; filter:grayscale(1); }
