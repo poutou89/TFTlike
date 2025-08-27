@@ -8,10 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const logEl    = document.getElementById('battle-log');
   const hudA     = document.getElementById('hud-allies');
   const hudE     = document.getElementById('hud-enemies');
-  const gaugeHp  = document.getElementById('gauge-hp');
-  const gaugeHpTxt  = document.getElementById('gauge-hp-text');
-  const gaugeMana= document.getElementById('gauge-mana');
-  const gaugeManaTxt= document.getElementById('gauge-mana-text');
   const btnStart = document.getElementById('btn-start');
   const btnPause = document.getElementById('btn-pause');
   const btnReset = document.getElementById('btn-reset');
@@ -82,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const list = (team) => [...unitsById.values()].filter(u=>u.team===team)
       .map(u=>`<li><img src="${full(u.img)}"><span>${u.name}</span><em>${u.hp} PV${u.shield>0?' • 🛡'+u.shield:''}${u.mana>0?' • 🔷'+u.mana:''}</em></li>`).join('');
     hudA.innerHTML = list('ally'); hudE.innerHTML = list('enemy');
-    updateTeamGauges();
   }
 
   function updateBars(u){
@@ -104,27 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function updateTeamGauges(){
-    if(!gaugeHp || !gaugeMana) return;
-    const allies = [...unitsById.values()].filter(u=>u.team==='ally');
-    // Totals: HP considers shield as extra buffer; Mana vs max 50 per design
-    let curHp=0, maxHp=0, curMana=0, maxMana=0;
-    for(const u of allies){
-      const hp = Math.max(0, u.hp||0); const sh = Math.max(0, u.shield||0);
-      const mh = Math.max(hp, u.maxHp||hp); // fallback
-      curHp += hp + sh; maxHp += (u.maxHp||mh) + sh; // include shield in current and cap with same shield for visual
-      const m = Math.max(0, u.mana||0);
-      curMana += m; maxMana += 50; // global threshold is 50 per unit
-    }
-    const hpPct = maxHp>0 ? Math.min(100, Math.round(100*curHp/maxHp)) : 0;
-    const maPct = maxMana>0 ? Math.min(100, Math.round(100*curMana/maxMana)) : 0;
-    const hpFill = gaugeHp.querySelector('.gauge__fill');
-    const maFill = gaugeMana.querySelector('.gauge__fill');
-    if(hpFill) hpFill.style.width = hpPct + '%';
-    if(maFill) maFill.style.width = maPct + '%';
-    if(gaugeHpTxt) gaugeHpTxt.textContent = `${curHp}/${maxHp}`;
-    if(gaugeManaTxt) gaugeManaTxt.textContent = `${curMana}/${maxMana}`;
-  }
+  // (global gauges removed)
 
   // --- SFX helper with light throttling ---
   const lastSfxAt = new Map();
@@ -153,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
       u.el = el; unitsById.set(u.id, u); updateBars(u);
     }
   renderHUD();
-  updateTeamGauges();
   }
 
   function applyAction(a){
@@ -176,16 +150,14 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'move': {
         const u=unitsById.get(a.id); if(!u)break;
         const to=cell(a.to[0],a.to[1]); if(!to)break;
-        to.appendChild(u.el); u.x=a.to[0]; u.y=a.to[1];
-  updateTeamGauges();
+  to.appendChild(u.el); u.x=a.to[0]; u.y=a.to[1];
         break;
       }
       case 'attack': {
         const att=unitsById.get(a.att), def=unitsById.get(a.def); if(!att||!def)break;
         const prevHp = def.hp;
         def.hp=a.hp; def.shield=a.shield; if(a.mana!==undefined) att.mana=a.mana;
-        updateBars(def); updateBars(att);
-  updateTeamGauges();
+  updateBars(def); updateBars(att);
         // half HP crossing
         if(prevHp>0 && def.hp>0){
           const wasAbove = prevHp > (def.maxHp||prevHp*2)/2;
@@ -204,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const crit = (a.crit===true) || (a.amount && dst.maxHp && a.amount >= 0.25*dst.maxHp);
         const url = crit && window.SFX_HEAL_CRIT_URL ? window.SFX_HEAL_CRIT_URL : window.SFX_HEAL_URL;
         playSfx(url, crit?0.8:0.6, crit?'healcrit':'heal', 80);
-  updateBars(src); updateBars(dst); updateTeamGauges(); if(a.log) log(a.log);
+  updateBars(src); updateBars(dst); if(a.log) log(a.log);
         break;
       }
       case 'log': if(a.msg) log(a.msg); break;
