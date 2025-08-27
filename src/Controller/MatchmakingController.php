@@ -104,11 +104,11 @@ class MatchmakingController extends AbstractController
                 ['a' => $dA, 'b' => $dB] = $this->rating->delta($ra, $rb, $scoreA, $kA, $kB);
 
                 if ($userA && $userA->getUsername() !== 'BOT') {
-                    $userA->setMmr(max(0, $ra + $dA));
+                    $userA->setMmr($this->rating->clampMmr($ra + $dA));
                     $userA->setGamesPlayed($userA->getGamesPlayed() + 1);
                 }
                 if ($userB && $userB->getUsername() !== 'BOT') {
-                    $userB->setMmr(max(0, $rb + $dB));
+                    $userB->setMmr($this->rating->clampMmr($rb + $dB));
                     $userB->setGamesPlayed($userB->getGamesPlayed() + 1);
                 }
                 // --------------------------------------------
@@ -197,8 +197,8 @@ class MatchmakingController extends AbstractController
         $botTeam->setGameMatch($match)->setStatus('matched');
         $em->flush();
 
-        $seed   = self::seedFor($match->getId(), $team->getId(), $botTeam->getId());
-        $replay = $this->sim->simulate($team, $botTeam, $seed);
+    $seed   = self::seedFor($match->getId(), $team->getId(), $botTeam->getId());
+    $replay = $this->sim->simulate($team, $botTeam, $seed);
 
         if (method_exists($match, 'setSeed'))   $match->setSeed($seed);
         if (method_exists($match, 'setReplay')) $match->setReplay($replay);
@@ -207,6 +207,35 @@ class MatchmakingController extends AbstractController
         $em->flush();
 
         $request->getSession()->set('replay_'.$match->getId(), $replay);
+
+        // ----- MMR vs BOT (après génération du replay) -----
+        $teamA = $team;                // user team (ally in replay)
+        $teamB = $botTeam;             // bot team (enemy)
+
+        $userA = $teamA->getUser();
+        $userB = $teamB->getUser();    // BOT
+
+        $ra = $userA?->getMmr() ?? 1000;
+        $rb = $userB?->getMmr() ?? 1000;
+
+        $scoreA = match ($replay['winner'] ?? 'draw') {
+            'ally'  => 1.0,
+            'enemy' => 0.0,
+            default => 0.5,
+        };
+
+        $kA = $userA ? $this->rating->kFactor($userA, true) : 0; // vsBot = true
+        $kB = $userB ? $this->rating->kFactor($userB, false) : 0; // BOT value unused
+
+        ['a' => $dA] = $this->rating->delta($ra, $rb, $scoreA, $kA, $kB);
+
+        if ($userA && $userA->getUsername() !== 'BOT') {
+            $userA->setMmr($this->rating->clampMmr($ra + $dA));
+            $userA->setGamesPlayed($userA->getGamesPlayed() + 1);
+        }
+        // ne pas modifier le MMR du BOT
+        $em->flush();
+        // --------------------------------------------
 
         return $this->json(['status' => 'matched', 'matchId' => $match->getId()]);
     }

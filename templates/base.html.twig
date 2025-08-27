@@ -26,8 +26,14 @@
                             <a href="{{ path('app_home') }}">Accueil</a>
                         </nav>
 
-                        <div class="auth-links">
+                                                <div class="auth-links">
                             {% if app.user %}
+                                                                <span class="mmr-badge" title="MMR actuel">
+                                                                        🏆 MMR: {{ app.user.mmr }}
+                                                                        {% if attribute(app.user, 'gamesPlayed') is defined %}
+                                                                            <small>({{ app.user.gamesPlayed }} matchs)</small>
+                                                                        {% endif %}
+                                                                </span>
                                 <a href="{{ path('app_team_builder') }}" class="btn btn-primary" >Lancer une partie</a>
                                 <a href="{{ path('me_matches') }}" class="btn btn-primary" >Lancer une partie</a>
                                 <form action="{{ path('app_logout') }}" method="post">

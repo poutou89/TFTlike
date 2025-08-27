@@ -38,11 +38,29 @@
   </div>
 </section>
 
-{# si tu utilises ces balises quelque part #}
-<script id="allies-from-replay" type="application/json">
-  {{ (replay.teams.ally  | default([])) | json_encode | raw }}
-</script>
-<script id="enemies-from-replay" type="application/json">
-  {{ (replay.teams.enemy | default([])) | json_encode | raw }}
-</script>
+{# Overlay résultat victoire/défaite #}
+<div id="result-overlay" class="result-overlay is-hidden" role="dialog" aria-modal="true" aria-live="assertive">
+  <div class="result-frame">
+    <button class="sound-toggle" id="result-sound-toggle" title="Activer/Désactiver le son" aria-pressed="false">🔊</button>
+    <div class="result-text" id="result-text">VICTOIRE</div>
+    <div class="result-actions">
+      <button class="btn btn-primary" id="btn-result-continue">Continuer</button>
+    </div>
+    <div class="result-stars" aria-hidden="true">
+      <span class="tw"></span><span class="tw"></span><span class="tw"></span>
+      <span class="tw"></span><span class="tw"></span><span class="tw"></span>
+      <span class="tw"></span><span class="tw"></span><span class="tw"></span>
+    </div>
+  </div>
+  <div class="result-veil" aria-hidden="true"></div>
+</div>
+
+  <script id="allies-json"  type="application/json">{{ allies  |json_encode()|raw }}</script>
+  <script id="enemies-json" type="application/json">{{ enemies |json_encode()|raw }}</script>
+  <script>window.ASSET_BASE = "{{ asset('') }}";</script>
+  <script id="replay-json" type="application/json">{{ replay|json_encode()|raw }}</script>
+{% endblock %}
+{# templates/match/show.html.twig #}
+{% block javascripts %}
+  {{ parent() }}   {# <= garde seulement l’entrée "app" #}
 {% endblock %}

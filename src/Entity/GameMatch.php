@@ -60,6 +60,7 @@ class GameMatch
     {
         $this->createdAt    = new \DateTimeImmutable();
         $this->participants = new ArrayCollection();
+        $this->teams        = new ArrayCollection();
     }
     /** @return Collection<int, Team> */
     public function getTeams(): Collection

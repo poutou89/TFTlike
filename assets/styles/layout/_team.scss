@@ -125,7 +125,103 @@
 
   .tb-actions { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; }
   .tb-hint { opacity:.9; }
+
+  /* Liste des bonus/synergies sous le bouton */
+  .tb-bonuses {
+    margin-top: .6rem; padding:.6rem .7rem; border-radius:12px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: inset 0 0 12px rgba(0,0,0,.12);
+    strong { color: v.$color-accent; display:block; margin-bottom:.35rem; }
+    .bonus-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:.4rem .6rem; }
+    .bonus-list li { display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .6rem;
+      border-radius:999px; border:1px solid rgba(255,255,255,.18);
+      background:
+        linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.06)) padding-box,
+        linear-gradient(90deg, v.$color-primary, v.$color-accent) border-box;
+      font-size:.9rem; position:relative; }
+    .bonus-item .fam-icon { filter: drop-shadow(0 0 6px rgba(v.$color-accent,.5)); }
+    .bonus-item .count { font-weight:800; background: rgba(0,0,0,.25); padding:.1rem .45rem; border-radius:999px; }
+    .bonus-item .effect { opacity:.95; }
+    .bonus-item .gauge { width: 90px; height:8px; border-radius:999px; overflow:hidden; background: rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); }
+    .bonus-item .gauge .bar { height:100%; background: linear-gradient(90deg, v.$color-primary, v.$color-accent); box-shadow: 0 0 8px rgba(v.$color-accent,.6); }
+    .bonus-list li .dot { width:8px; height:8px; border-radius:50%; background: v.$color-accent; box-shadow: 0 0 10px rgba(v.$color-accent,.8); }
+  }
 }
 .page-team .tag:empty { display: none; }
+
+  /* Skeleton overlay for matchmaking search */
+  .tb-loading { position: fixed; inset: 0; z-index: 2000; display:none; place-items:center; }
+  .tb-loading.is-visible { display:grid; }
+  .tb-loading.is-hidden { display:none; }
+  .tb-loading__veil { position:absolute; inset:0; background: radial-gradient(80% 120% at 50% 40%, rgba(20,10,35,.75), rgba(10,6,20,.82)); backdrop-filter: blur(4px); }
+  .tb-loading__ornaments { position: absolute; inset: 0; pointer-events: none; overflow:hidden; }
+  .tb-loading__ornaments .mg-circle {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+    width: min(420px, 70vw); height: min(420px, 70vw); border-radius: 50%;
+    background:
+      radial-gradient(closest-side, rgba(255,255,255,.08), transparent 70%),
+      conic-gradient(from 0deg, rgba(255,255,255,.0) 0 340deg, rgba(255,255,255,.5) 350deg 360deg);
+    box-shadow: 0 0 60px rgba(255,255,255,.12), inset 0 0 40px rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.22);
+    animation: mg-circle-rotate 9s linear infinite;
+  }
+  .tb-loading__ornaments .mg-wand {
+    position: absolute; left: 50%; top: 42%; width: 64px; height: 64px; transform-origin: -140px 32px;
+  background: url('../../images/mg/wand.svg') center/contain no-repeat;
+    filter: drop-shadow(0 0 10px rgba(255,255,255,.55)) drop-shadow(0 0 20px rgba(167,107,255,.45));
+    animation: mg-wand-spin 1.8s ease-in-out infinite;
+  }
+  .tb-loading__ornaments .mg-stars { position: absolute; inset: 0; }
+  .tb-loading__ornaments .twinkle {
+    position: absolute; width: 8px; height: 8px; border-radius: 50%;
+    background: radial-gradient(circle, #fff, rgba(255,255,255,.1));
+    box-shadow: 0 0 14px rgba(255,255,255,.9), 0 0 26px rgba(167,107,255,.55);
+    opacity: 0; animation: mg-twinkle 2.4s ease-in-out infinite;
+  }
+  /* scatter stars using nth-child offsets */
+  .tb-loading__ornaments .twinkle:nth-child(12n+1) { left: 12%; top: 20%; animation-delay: .0s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+2) { left: 28%; top: 68%; animation-delay: .2s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+3) { left: 44%; top: 26%; animation-delay: .4s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+4) { left: 60%; top: 72%; animation-delay: .6s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+5) { left: 76%; top: 18%; animation-delay: .8s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+6) { left: 18%; top: 82%; animation-delay: 1.0s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+7) { left: 84%; top: 46%; animation-delay: 1.2s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+8) { left: 36%; top: 50%; animation-delay: 1.4s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+9) { left: 66%; top: 34%; animation-delay: 1.6s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+10){ left: 8%;  top: 44%; animation-delay: 1.8s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+11){ left: 92%; top: 62%; animation-delay: 2.0s; }
+  .tb-loading__ornaments .twinkle:nth-child(12n+12){ left: 52%; top: 84%; animation-delay: 2.2s; }
+  .tb-loading__center { position: relative; z-index: 1; display:grid; place-items:center; }
+  .sk-card { position: relative; display:grid; place-items:center; }
+  .tb-loading__message { font-size: clamp(1.2rem, 2.4vw, 1.8rem); font-weight: 900; letter-spacing: .5px;
+    text-align:center; text-shadow: 0 3px 10px rgba(0,0,0,.55), 0 0 18px rgba(167,107,255,.55);
+    background: linear-gradient(90deg, v.$color-primary, v.$color-accent);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    padding: .4rem .8rem; border-radius: 10px; }
+
+  .sk { border-radius: 12px; overflow:hidden; background: linear-gradient(90deg, rgba(255,255,255,.08) 25%, rgba(v.$color-accent,.24) 37%, rgba(255,255,255,.08) 63%);
+    background-size: 400% 100%; animation: mg-shimmer 1.2s ease-in-out infinite; }
+  .sk-card { width: min(560px, 86vw); height: min(300px, 44vh); border-radius: 16px; }
+  .sk-card--xl { box-shadow: 0 24px 60px rgba(0,0,0,.35), inset 0 0 22px rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); }
+
+  @keyframes mg-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @keyframes mg-wand-spin {
+    0%   { transform: translate(-50%, -50%) rotate(-10deg) scale(1); }
+    50%  { transform: translate(-50%, -50%) rotate(10deg)  scale(1.04); }
+    100% { transform: translate(-50%, -50%) rotate(-10deg) scale(1); }
+  }
+  @keyframes mg-circle-rotate {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+  @keyframes mg-twinkle {
+    0%, 100% { opacity: 0; transform: scale(.6); }
+    50%      { opacity: 1; transform: scale(1); }
+  }
 
 }

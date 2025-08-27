@@ -2,9 +2,7 @@
   "build/app.css": "/build/app.css",
   "build/app.js": "/build/app.js",
   "build/runtime.js": "/build/runtime.js",
-  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-45bd0e.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-45bd0e.js",
+  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-69e170.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-69e170.js",
   "build/images/Bg.png": "/build/images/Bg.8615679f.png",
-  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-be065f.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-be065f.js",
-  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-4a0c15.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-4a0c15.js",
-  "build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-f947ab.js": "/build/vendors-node_modules_core-js_modules_es_array_concat_js-node_modules_core-js_modules_es_array-f947ab.js"
+  "build/images/wand.svg": "/build/images/wand.fd3da1c2.svg"
 }

@@ -7,17 +7,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const fullImg = (p) => ASSET_BASE + String(p || '').replace(/^\/+/, '');
   
   console.log('Team Builder script loaded!', { ASSET_BASE });
-  const ownedEl   = document.getElementById('owned-girls-json');
+  const ownedEl      = document.getElementById('owned-girls-json');
+  const suggestedEl  = document.getElementById('suggested-girls-json');
   if (!ownedEl) return;
 
   /** @type {Array} */
-  const OWNED     = JSON.parse(ownedEl.textContent || '[]');
+  const OWNED        = JSON.parse(ownedEl.textContent || '[]');
+  /** @type {Array} */
+  const SUGGESTED    = suggestedEl ? JSON.parse(suggestedEl.textContent || '[]') : [];
 
   const pickGrid  = document.getElementById('pick-grid');
   const benchGrid = document.getElementById('bench-grid');
   const board     = document.getElementById('board');
   const btnReroll = document.getElementById('btn-reroll');
+  const rerollCountEl = document.getElementById('reroll-count');
   const btnLock   = document.getElementById('btn-lock');
+  const bonusList = document.getElementById('team-bonuses');
+  const skeleton  = document.getElementById('search-skeleton');
 
   const MAX_TEAM  = 4;
   const placed    = new Map(); // "x,y" -> { girl, el }
@@ -68,10 +74,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // double-clic -> toggle banc
     card.addEventListener('dblclick', () => {
+      // Toggle banc: si déjà dans le banc -> on le laisse affiché mais on le marque comme non-préservé
       if (card.parentElement === benchGrid) {
-        benchGrid.removeChild(card);
+        // Retrait du banc: on le remet dans son conteneur source si possible, sinon on le supprime proprement
         inBench.delete(girl.id);
+        // Déplacer la carte vers la zone de pick pour la rendre rerollable
+        if (pickGrid) pickGrid.appendChild(card);
+        else card.remove();
       } else {
+        // Ajout au banc
         benchGrid.appendChild(card);
         inBench.set(girl.id, card);
       }
@@ -114,17 +125,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function renderPick() {
   pickGrid.innerHTML = '';
-  let pool = [...OWNED];
+  let pool = SUGGESTED.length ? [...SUGGESTED] : [...OWNED];
   if (pool.length === 0) return;
 
   // on duplique si < 4
-  while (pool.length < 4) pool = pool.concat(OWNED);
+  while (pool.length < 4) pool = pool.concat(pool);
 
+  // Exclure ceux déjà au banc (préservés) du tirage
+  const preservedIds = new Set(Array.from(inBench.keys()));
+  const pool2 = pool.filter(g => !preservedIds.has(g.id));
+
+  // Sélectionne jusqu'à 4 suggestions uniques parmi le pool restant
   const picks = [];
   const taken = new Set();
-  while (picks.length < 4 && taken.size < pool.length) {
-    const i = Math.floor(Math.random() * pool.length);
-    if (!taken.has(i)) { taken.add(i); picks.push(pool[i]); }
+  const target = Math.min(4, pool2.length);
+  while (picks.length < target && taken.size < pool2.length) {
+    const i = Math.floor(Math.random() * pool2.length);
+    if (!taken.has(i)) { taken.add(i); picks.push(pool2[i]); }
   }
   picks.forEach(g => pickGrid.appendChild(renderCard(g, { source: 'pick' })));
 }
@@ -220,6 +237,7 @@ let ticketId = null;
 let pollTimer = null;
 
 btnLock.addEventListener('click', async () => {
+  if (skeleton) { skeleton.classList.remove('is-hidden'); skeleton.classList.add('is-visible'); }
   // build payload
   const lineup = Array.from(placed.entries()).map(([key, val]) => {
     const [x, y] = key.split(',').map(Number);
@@ -271,19 +289,97 @@ btnLock.addEventListener('click', async () => {
       console.log('matchmaking/status ->', j);
       if (j.status === 'matched') {
         clearInterval(pollTimer);
+    if (skeleton) { skeleton.classList.remove('is-visible'); skeleton.classList.add('is-hidden'); }
         window.location.href = `/match/${j.matchId}`;
       }
     }, 5000);
   } catch (e) {
     console.error(e);
     alert('Erreur réseau: ' + e.message);
+  if (skeleton) { skeleton.classList.remove('is-visible'); skeleton.classList.add('is-hidden'); }
   }
 });
 
   function updateLockState() {
     btnLock.disabled = (placed.size !== MAX_TEAM);
+    renderBonuses();
+  }
+
+  // --- Synergy computation (client-side mirror of server tiers) ---
+  function computeBonuses() {
+    const counts = {}; // family -> count
+    for (const [, {girl}] of placed) {
+      const fam = (girl.family || '').toLowerCase();
+      if (!fam) continue; counts[fam] = (counts[fam] || 0) + 1;
+    }
+    const tiers = {};
+    for (const [fam, n] of Object.entries(counts)) {
+      const tier = n >= 4 ? 4 : (n >= 3 ? 3 : (n >= 2 ? 2 : 0));
+      if (tier === 0) continue; tiers[fam] = { n, tier };
+    }
+    return tiers;
+  }
+
+  function renderBonuses() {
+    if (!bonusList) return;
+    const tiers = computeBonuses();
+    bonusList.innerHTML = '';
+    const label = (fam, tier, n) => {
+      const map = {
+        soleil: {2:'ATK +5%',3:'Précision +5%',4:'Crit +5%'},
+        lune:   {2:'Esquive +3%',3:'Esquive +2% & Mana +10',4:'Bouclier +10'},
+        nature: {2:'PV +5%',3:'Bouclier +15',4:'PV +5%'},
+        idole:  {2:'Crit +5%',3:'ATK +5%',4:'Mana +10'},
+        ombre:  {2:'Esquive +5%',3:'Précision +5%',4:'Bouclier +15'},
+        arcane: {2:'Précision +5%',3:'Mana +15',4:'Crit +5%'},
+        etoile: {2:'Précision +3%',3:'Crit +5%',4:'ATK +5%'},
+        ocean:  {2:'Esquive +3%',3:'Mana +10',4:'Précision +5%'}
+      };
+      const effect = (map[fam] && map[fam][tier]) ? map[fam][tier] : `Palier ${tier}`;
+      const title = fam.charAt(0).toUpperCase() + fam.slice(1);
+      return `${title} x${n} — ${effect}`;
+    };
+    const ICON = { soleil:'☀️', lune:'🌙', nature:'🍃', idole:'🎵', ombre:'🌑', arcane:'✨', etoile:'⭐', ocean:'🌊' };
+    Object.entries(tiers).forEach(([fam, {tier, n}]) => {
+      const li = document.createElement('li');
+      li.className = `bonus-item fam-${fam} tier-${tier}`;
+      const title = fam.charAt(0).toUpperCase() + fam.slice(1);
+      const effectText = label(fam, tier, n).split(' — ').pop();
+      const pct = Math.min(100, Math.round((n / 4) * 100));
+      li.innerHTML = `
+        <span class="fam-icon" aria-hidden="true">${ICON[fam] || '✧'}</span>
+        <span class="fam-name">${title}</span>
+        <span class="count">x${n}</span>
+        <div class="gauge" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="${n}">
+          <div class="bar" style="width:${pct}%"></div>
+        </div>
+        <span class="effect">${effectText}</span>
+      `;
+      bonusList.appendChild(li);
+    });
   }
 
   // init
   renderPick();
+  renderBonuses();
+
+  // --- Reroll limité à 3 ---
+  let rerollsLeft = Number(window.REROLLS_LEFT ?? 3);
+  const updateRerollUI = () => {
+    if (rerollCountEl) rerollCountEl.textContent = `(${rerollsLeft} restant${rerollsLeft>1?'s':''})`;
+    if (btnReroll) btnReroll.disabled = rerollsLeft <= 0;
+  };
+  updateRerollUI();
+  if (btnReroll) {
+    btnReroll.addEventListener('click', async () => {
+      if (rerollsLeft <= 0) return;
+      try {
+        const res = await fetch(window.REROLL_DEC_URL, { method: 'POST', credentials: 'same-origin' });
+        const data = await res.json();
+        rerollsLeft = Number(data?.left ?? rerollsLeft);
+      } catch {}
+      updateRerollUI();
+      renderPick(); // pas de reload -> pas de clignotement
+    });
+  }
 });

@@ -61,4 +61,50 @@
     background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15);
     border-radius: 12px; padding:.5rem; color: v.$color-text; font-size:.9rem;
   }
+
+  /* Result overlay (Victory/Defeat) */
+  .result-overlay { position: fixed; inset: 0; z-index: 3000; display:none; place-items:center; }
+  .result-overlay.is-hidden { display:none; }
+  .result-overlay:not(.is-hidden) { display:grid; }
+  .result-veil { position:absolute; inset:0; background: radial-gradient(70% 110% at 50% 40%, rgba(20,10,35,.7), rgba(10,6,20,.85)); backdrop-filter: blur(2px); }
+  .result-frame { position: relative; z-index:1; min-width: min(640px, 92vw); border-radius: 18px; padding: 1.2rem 1.6rem;
+    background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.18);
+    box-shadow: 0 24px 60px rgba(0,0,0,.45), inset 0 0 18px rgba(255,255,255,.08);
+    animation: pop-in .35s ease-out; }
+  .result-text { text-align:center; font-weight: 1000; letter-spacing: .12em;
+    font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.1; margin: .4rem 0;
+    background: linear-gradient(90deg, v.$color-primary, v.$color-accent);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 3px 12px rgba(0,0,0,.55), 0 0 28px rgba(167,107,255,.55); }
+  .result-actions { display:flex; justify-content:center; margin-top:.6rem; }
+  .result-actions .btn { font-weight:800; }
+  .sound-toggle { position:absolute; right:.6rem; top:.6rem; background: rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.22);
+    border-radius: 999px; padding: .3rem .5rem; color: #fff; cursor: pointer; }
+  .sound-toggle[aria-pressed="true"] { background: rgba(255,255,255,.18); }
+  .result-stars { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .result-stars .tw { position:absolute; width:8px; height:8px; border-radius:50%;
+    background: radial-gradient(circle, #fff, rgba(255,255,255,.1));
+    box-shadow: 0 0 14px rgba(255,255,255,.9), 0 0 26px rgba(167,107,255,.55);
+    animation: twinkle 2.2s ease-in-out infinite; opacity:0; }
+  .result-stars .tw:nth-child(1){ left:12%; top:20%; animation-delay:0s; }
+  .result-stars .tw:nth-child(2){ left:24%; top:68%; animation-delay:.2s; }
+  .result-stars .tw:nth-child(3){ left:40%; top:38%; animation-delay:.4s; }
+  .result-stars .tw:nth-child(4){ left:58%; top:22%; animation-delay:.6s; }
+  .result-stars .tw:nth-child(5){ left:72%; top:66%; animation-delay:.8s; }
+  .result-stars .tw:nth-child(6){ left:84%; top:30%; animation-delay:1s; }
+  .result-stars .tw:nth-child(7){ left:18%; top:84%; animation-delay:1.2s; }
+  .result-stars .tw:nth-child(8){ left:50%; top:76%; animation-delay:1.4s; }
+  .result-stars .tw:nth-child(9){ left:88%; top:50%; animation-delay:1.6s; }
+  @keyframes twinkle { 0%,100%{ opacity:0; transform:scale(.6);} 50%{ opacity:1; transform:scale(1);} }
+  .result-overlay.is-victory .result-text {
+    background: linear-gradient(90deg, #8ef0ff, #ffd1f3);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 28px rgba(142,240,255,.7), 0 0 36px rgba(255,209,243,.65);
+  }
+  .result-overlay.is-defeat .result-text {
+    background: linear-gradient(90deg, #ff9fb1, #b572f6);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 26px rgba(255,159,177,.7), 0 0 34px rgba(181,114,246,.65);
+  }
+  @keyframes pop-in { from { transform: translateY(8px) scale(.98); opacity:.0; } to { transform: translateY(0) scale(1); opacity:1; } }
 }

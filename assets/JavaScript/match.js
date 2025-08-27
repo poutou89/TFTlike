@@ -91,7 +91,50 @@ document.addEventListener('DOMContentLoaded', () => {
   function playTick(){
     if(step >= (REPLAY.actions?.length || 0)){
       clearInterval(timer); timer=null;
-      log(REPLAY.winner==='ally'?'Victoire !':REPLAY.winner==='enemy'?'Défaite…':'Égalité !');
+      const outcome = REPLAY.winner==='ally' ? 'victory' : REPLAY.winner==='enemy' ? 'defeat' : 'draw';
+      log(outcome==='victory'?'Victoire !':outcome==='defeat'?'Défaite…':'Égalité !');
+      // show overlay
+      const ov = document.getElementById('result-overlay');
+      const tx = document.getElementById('result-text');
+      const btnC = document.getElementById('btn-result-continue');
+      const btnS = document.getElementById('result-sound-toggle');
+      if (ov && tx) {
+        ov.classList.remove('is-hidden');
+        ov.classList.toggle('is-victory', outcome==='victory');
+        ov.classList.toggle('is-defeat', outcome==='defeat');
+        tx.textContent = outcome==='victory' ? 'VICTOIRE' : outcome==='defeat' ? 'DÉFAITE' : 'ÉGALITÉ';
+
+        // Sound FX (WebAudio simple tones)
+        let audioEnabled = false, ctx = null;
+        function playJingle(kind){
+          try{
+            if(!audioEnabled) return;
+            if(!ctx) ctx = new (window.AudioContext||window.webkitAudioContext)();
+            const now = ctx.currentTime;
+            const notes = kind==='victory' ? [523,659,784] : kind==='defeat' ? [392,349,261] : [440,440,440];
+            notes.forEach((f,i)=>{
+              const o = ctx.createOscillator();
+              const g = ctx.createGain();
+              o.type='sine'; o.frequency.value=f;
+              o.connect(g); g.connect(ctx.destination);
+              const t = now + i*0.18; g.gain.setValueAtTime(0.001,t); g.gain.exponentialRampToValueAtTime(0.2,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+              o.start(t); o.stop(t+0.32);
+            });
+          }catch(e){ console.debug('audio failed', e); }
+        }
+        if (btnS) {
+          btnS.addEventListener('click',()=>{
+            audioEnabled = !audioEnabled;
+            btnS.setAttribute('aria-pressed', audioEnabled? 'true':'false');
+            if(audioEnabled){ playJingle(outcome); }
+          });
+        }
+
+        // Continue button or click anywhere on veil
+        const hide = ()=> ov.classList.add('is-hidden');
+        if(btnC) btnC.addEventListener('click', hide, { once:true });
+        ov.querySelector('.result-veil')?.addEventListener('click', hide, { once:true });
+      }
       return;
     }
     applyAction(REPLAY.actions[step++]); renderHUD();

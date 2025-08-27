@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <radialGradient id="g1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#A76BFF" stop-opacity=".95"/>
+      <stop offset="100%" stop-color="#A76BFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFD1F3"/>
+      <stop offset="100%" stop-color="#A76BFF"/>
+    </linearGradient>
+  </defs>
+  <!-- glow -->
+  <circle cx="60" cy="40" r="26" fill="url(#g1)"/>
+  <!-- wand stick -->
+  <rect x="60" y="52" width="10" height="64" rx="3" transform="rotate(30 60 52)" fill="url(#g2)" stroke="#FFFFFF" stroke-opacity=".6"/>
+  <!-- star tip -->
+  <g transform="translate(60 40) rotate(-8)">
+    <path d="M0 -16 L4 -4 L16 0 L4 4 L0 16 L-4 4 L-16 0 L-4 -4 Z" fill="url(#g2)" stroke="#FFFFFF" stroke-opacity=".9" stroke-width="1.2"/>
+  </g>
+</svg>

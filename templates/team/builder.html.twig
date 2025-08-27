@@ -16,7 +16,9 @@
       <div class="tb-pick">
         <div class="tb-pick__head">
           <h2>Tirage</h2>
-          <button class="btn btn-ghost" id="btn-reroll">↻ Re-tirer</button>
+          <button class="btn btn-ghost" id="btn-reroll" type="button" title="Reroll limité à 3">
+            🔄 Re-tirer <span id="reroll-count" style="margin-left:.35rem;opacity:.85"></span>
+          </button>
         </div>
         <div class="tb-pick__grid" id="pick-grid"><!-- cartes tirage rendues par JS --></div>
       </div>
@@ -53,13 +55,50 @@
         <button class="btn btn-primary" id="btn-lock" disabled>🔒 Verrouiller & Rechercher</button>
         <div class="tb-hint">Place exactement 4 héroïnes.</div>
       </div>
+
+      {# Zone d'affichage des bonus de synergie #}
+      <div class="tb-bonuses">
+        <strong>Synergies d'équipe</strong>
+        <ul id="team-bonuses" class="bonus-list"></ul>
+      </div>
     </main>
   </div>
 </section>
 
+{# overlay de chargement (skeleton) lors de la recherche #}
+<div id="search-skeleton" class="tb-loading is-hidden" aria-hidden="true">
+  <div class="tb-loading__ornaments" aria-hidden="true">
+    <div class="mg-circle"></div>
+    <div class="mg-wand" title="Magical matchmaking"></div>
+    <div class="mg-stars">
+      <span class="twinkle" style="--i:0;"></span>
+      <span class="twinkle" style="--i:1;"></span>
+      <span class="twinkle" style="--i:2;"></span>
+      <span class="twinkle" style="--i:3;"></span>
+      <span class="twinkle" style="--i:4;"></span>
+      <span class="twinkle" style="--i:5;"></span>
+      <span class="twinkle" style="--i:6;"></span>
+      <span class="twinkle" style="--i:7;"></span>
+      <span class="twinkle" style="--i:8;"></span>
+      <span class="twinkle" style="--i:9;"></span>
+      <span class="twinkle" style="--i:10;"></span>
+      <span class="twinkle" style="--i:11;"></span>
+    </div>
+  </div>
+  <div class="tb-loading__center">
+    <div class="sk sk-card sk-card--xl">
+      <div class="tb-loading__message" aria-live="polite">✨ Recherche en cours… ✨</div>
+    </div>
+  </div>
+  <div class="tb-loading__veil"></div>
+  </div>
+
 {# données pour le JS #}
 <script id="owned-girls-json" type="application/json">
   {{ owned_girls|json_encode()|raw }}
+</script>
+<script id="suggested-girls-json" type="application/json">
+  {{ suggested_girls|json_encode()|raw }}
 </script>
 <script>
   window.ASSET_BASE = "{{ asset('') }}";  // <-- racine ("/"), plus "images/mg/"
@@ -68,6 +107,7 @@
     status: "{{ path('matchmaking_status', {ticketId:'__ID__'}) }}",  // we replace __ID__ in JS
     cancel: "{{ path('matchmaking_cancel', {ticketId: 0})|replace({'/0':'/'}) }}"
   };
-</script>
+  window.REROLLS_LEFT = {{ rerolls_left|default(3) }};
+  window.REROLL_DEC_URL = "{{ path('app_team_reroll_dec') }}";
 </script>
 {% endblock %}

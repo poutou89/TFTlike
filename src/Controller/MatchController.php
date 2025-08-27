@@ -85,6 +85,7 @@ final class MatchController extends AbstractController
         return (int) sprintf('%u', crc32('m:'.$matchId.';t:'.$a.','.$b));
     }
 
+
     /** @return array<int,array<string,mixed>> */
     private function packFromLineup(Team $team, HeroRepository $heroRepo): array
     {

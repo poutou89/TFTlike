@@ -51,6 +51,31 @@
   .nav-links, .auth-links { display: flex; align-items: center; gap: .6rem; }
   .auth-links form { display: contents; } /* garde le <a> déconnexion inline */
 
+  /* Badge MMR magique */
+  .mmr-badge {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .38rem .7rem; border-radius: 999px;
+    font-weight: 600; letter-spacing: .2px;
+    background: linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,.08));
+    border: 1px solid rgba(255,255,255,.22);
+  color: #fff; // force contraste
+  text-shadow: 0 1px 2px rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.35);
+    box-shadow: 0 6px 18px rgba(v.$color-primary,.25), inset 0 0 10px rgba(v.$color-accent,.25);
+    position: relative; isolation: isolate;
+
+    &::before {
+      content: '✧'; position: absolute; left: .4rem; top: -.45rem; color: v.$color-accent;
+      font-size: .85rem; opacity: .85; filter: drop-shadow(0 0 6px rgba(v.$color-accent,.6));
+    }
+    &::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: radial-gradient(60% 140% at 0% 0%, rgba(v.$color-primary,.18), transparent 60%),
+                  radial-gradient(80% 120% at 100% 100%, rgba(v.$color-accent,.18), transparent 60%);
+      mix-blend-mode: screen; opacity: .9;
+    }
+  small { opacity: .9; font-weight: 600; color: #f7f2ff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+  }
+
   /* liens : pilules pastel + glow + mini étoiles au hover */
   .nav-links a, .auth-links a {
     position: relative;
