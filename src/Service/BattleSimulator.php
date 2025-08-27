@@ -97,6 +97,9 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
     $initial = $this->snapshot($units);
 
     $tickMax   = 999;
+    $TICK_SECONDS = 0.4; // Keep in sync with frontend playback speed (match.js TICK_MS=400)
+    $SUDDEN_DEATH_START = 15.0; // seconds
+    $suddenAppliedSec = 0; // how many sudden-death seconds have been applied so far
     $rangeFor  = fn(string $cls) => ($cls === 'dps_ranged' || $cls === 'healer') ? 2 : 1;
     $dist      = fn(array $a, array $b) => abs($a['x'] - $b['x']) + abs($a['y'] - $b['y']);
     $inBounds  = fn(int $x, int $y) => ($x >= 0 && $x < 7 && $y >= 0 && $y < 4);
@@ -306,6 +309,28 @@ public function simulate(Team $allyTeam, Team $enemyTeam, ?int $seed = null): ar
             }
         }
         unset($me);
+
+        // --- Sudden death: after 15s, each second applies N true damage to all living units (N = seconds elapsed since 15) ---
+        $elapsed = ($tick + 1) * $TICK_SECONDS; // end-of-tick time
+        if ($elapsed > $SUDDEN_DEATH_START) {
+            $secSince = (int)floor($elapsed - $SUDDEN_DEATH_START);
+            if ($secSince > $suddenAppliedSec) {
+                // Newly crossed one or more whole seconds; apply for the latest one
+                $dmg = $secSince; // increasing damage per second
+                $actions[] = ['t'=>'log','msg'=>sprintf('Fatigue (+%ds) : toutes les unités subissent %d dégâts', $secSince, $dmg)];
+                foreach ($units as $j => &$u) {
+                    if (!is_array($u)) continue; if (($u['hp'] ?? 0) <= 0) continue;
+                    // True damage directly to HP (ignores shield/armor) to ensure the match ends
+                    $u['hp'] = max(0, (int)$u['hp'] - $dmg);
+                    $actions[] = [
+                        't'=>'attack','att'=>$u['id'],'def'=>$u['id'],'crit'=>false,'dmg'=>$dmg,
+                        'hp'=>$u['hp'],'shield'=>(int)($u['shield'] ?? 0),'mana'=>(int)($u['mana'] ?? 0),
+                    ];
+                }
+                unset($u);
+                $suddenAppliedSec = $secSince;
+            }
+        }
 
         if (!$this->hasAlive($units,'ally') || !$this->hasAlive($units,'enemy')) break;
     }
