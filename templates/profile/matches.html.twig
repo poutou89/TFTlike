@@ -1,28 +1,71 @@
 {% extends 'base.html.twig' %}
 {% block title %}Mes matchs{% endblock %}
 {% block main %}
-<h1>Mes matchs</h1>
-<table class="table">
-  <thead>
-    <tr><th>ID Match</th><th>Adversaire</th><th>Voir</th></tr>
-  </thead>
-  <tbody>
-  {% for r in rows %}
-    {% set t = r[0] ?? r.t ?? r %}
-    {% set m = r.m ?? (t.gameMatch ?? null) %}
-    {% set opp = r.opp ?? null %}
-    <tr>
-      <td>{{ m ? m.id : '—' }}</td>
-      <td>{{ opp and opp.user ? opp.user.username : 'BOT / inconnu' }}</td>
-      <td>
-        {% if m %}
-          <a class="btn btn-sm btn-outline-primary" href="{{ path('app_match_show', {id:m.id}) }}">Revoir</a>
-        {% endif %}
-      </td>
-    </tr>
-  {% else %}
-    <tr><td colspan="3">Aucun match.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<section class="matches-page">
+  <div class="container">
+    <div class="mg-section-header">
+      <h2>Mes matchs</h2>
+      <p>Retrouvez vos dernières parties et relancez un replay en un clic.</p>
+    </div>
+
+    {% if rows is empty %}
+      <div class="mg-card" style="text-align:center">
+        <p>Aucun match pour le moment.</p>
+      </div>
+    {% else %}
+      <div class="mg-grid matches-grid">
+        {% for r in rows %}
+          {% set t = r[0] ?? r.t ?? r %}
+          {% set m = r.m ?? (t.gameMatch ?? null) %}
+          {% set opp = r.opp ?? null %}
+
+          {% set oppName = opp and opp.user ? opp.user.username : 'BOT / inconnu' %}
+          {% set isFinished = m and m.finishedAt %}
+          {% set when = m and (m.finishedAt ?? m.startedAt ?? m.createdAt) %}
+          {% set status = m ? (m.status ?? 'pending') : 'pending' %}
+          {% set state = isFinished ? 'finished' : (status == 'running' ? 'running' : 'pending') %}
+
+          <article class="mg-card match-card">
+            <header class="match-card__head">
+              <div class="match-card__title">
+                <span class="muted">vs</span> {{ oppName }}
+              </div>
+              <span class="badge badge--{{ state }}">
+                {% if state == 'finished' %}Terminé{% elseif state == 'running' %}En cours{% else %}En attente{% endif %}
+              </span>
+            </header>
+
+            <div class="match-card__meta">
+              <div>
+                <span class="label">Match</span>
+                <strong>#{{ m ? m.id : '—' }}</strong>
+              </div>
+              <div>
+                <span class="label">Mode</span>
+                <strong>{{ m and m.mode ? m.mode : '1v1' }}</strong>
+              </div>
+              <div>
+                <span class="label">Date</span>
+                <strong>{{ when ? when|date('d/m/Y H:i') : '—' }}</strong>
+              </div>
+              <div>
+                <span class="label">Durée</span>
+                {% set dur = (m and m.startedAt and m.finishedAt) ? (m.finishedAt|date('U') - m.startedAt|date('U')) : 0 %}
+                {% set mins = (dur // 60) %}
+                {% set secs = dur % 60 %}
+                <strong>{{ dur > 0 ? (mins ~ 'm ' ~ secs ~ 's') : '—' }}</strong>
+              </div>
+            </div>
+
+            <footer class="match-card__actions">
+              {% if m %}
+                <a class="btn btn-primary" href="{{ path('app_match_show', {id:m.id}) }}">Revoir</a>
+              {% endif %}
+            </footer>
+          </article>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}
