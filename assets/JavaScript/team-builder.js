@@ -5,6 +5,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const ASSET_BASE = (window.ASSET_BASE || '/').replace(/\/?$/, '/');
   const fullImg = (p) => ASSET_BASE + String(p || '').replace(/^\/+/, '');
+  const IS_TOUCH = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
   
   console.log('Team Builder script loaded!', { ASSET_BASE });
   const ownedEl      = document.getElementById('owned-girls-json');
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnLock   = document.getElementById('btn-lock');
   const bonusList = document.getElementById('team-bonuses');
   const skeleton  = document.getElementById('search-skeleton');
+  const hintEl    = document.querySelector('.tb-hint');
   // Floating drag label for items
   let dragTip = null; const getDragTip = () => {
     if (dragTip) return dragTip;
@@ -45,6 +47,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const inBench   = new Map(); // girlId -> cardElement
   const ALL_ITEMS = Array.isArray(window.ITEMS) ? window.ITEMS : [];
   // Items: only 4 proposals at a time (no full catalog view here)
+
+  // Selection state for touch/mobile (and keyboard/mouse as a fallback to DnD)
+  let selection = { type: null, data: null, el: null }; // type: 'girl' | 'item' | null
+  function clearSelection() {
+    if (selection.el) selection.el.classList.remove('is-selected');
+    selection = { type: null, data: null, el: null };
+    board.classList.remove('is-placing', 'is-equipping');
+    document.querySelectorAll('.tb-item.is-selected').forEach(b => b.classList.remove('is-selected'));
+    if (hintEl && IS_TOUCH) hintEl.textContent = 'Place exactement 4 héroïnes.';
+  }
+  function selectGirl(girl, el) {
+    clearSelection();
+    selection = { type: 'girl', data: girl, el };
+    if (el) el.classList.add('is-selected');
+    board.classList.add('is-placing');
+    if (hintEl && IS_TOUCH) hintEl.textContent = 'Sélectionne une case du plateau pour placer la héroïne.';
+  }
+  function selectItem(item, el) {
+    clearSelection();
+    selection = { type: 'item', data: item, el };
+    if (el) el.classList.add('is-selected');
+    board.classList.add('is-equipping');
+    if (hintEl && IS_TOUCH) hintEl.textContent = 'Tape une héroïne sur le plateau pour lui attribuer l\'objet.';
+  }
 
   // helpers
   const randInt = (n) => Math.floor(Math.random() * n);
@@ -84,9 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'tb-item';
       btn.setAttribute('data-item-id', it.id);
-      const title = it.desc ? `${it.name} — ${it.desc}` : it.name;
-      btn.setAttribute('title', title);
-      btn.draggable = true;
+  const title = it.desc ? `${it.name} — ${it.desc}` : it.name;
+  btn.setAttribute('title', title);
+  btn.setAttribute('aria-label', title);
+      btn.draggable = !IS_TOUCH;
       btn.innerHTML = `<img src="${fullImg(it.img)}" alt="${it.name}">`;
       btn.addEventListener('dragstart', (e) => {
         btn.classList.add('dragging');
@@ -99,6 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.remove('dragging');
         if (dragTip) dragTip.style.display = 'none';
       });
+      // Tap to equip (mobile-friendly)
+      btn.addEventListener('click', () => {
+        const already = btn.classList.contains('is-selected');
+        if (already) { clearSelection(); return; }
+        selectItem(it, btn);
+      });
       itemsGrid.appendChild(btn);
     });
   }
@@ -107,11 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderCard(girl, { source }) {
     const card = document.createElement('div');
     card.className = `tb-card tb-card--${girl.class}`;
-    card.draggable = true;
+  card.draggable = !IS_TOUCH;
     card.dataset.id = girl.id;
     card.dataset.source = source;
 
     card.innerHTML = `
+      <button class="tb-card__bench-btn" type="button" title="Ajouter au banc" aria-label="Ajouter au banc">🧺</button>
       <div class="tb-card__img">
         <img src="${fullImg(girl.img)}" alt="${girl.name}">
       </div>
@@ -129,11 +163,33 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
 
+    // Bench button (useful on mobile)
+    const benchBtn = card.querySelector('.tb-card__bench-btn');
+    benchBtn?.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (card.parentElement !== benchGrid) {
+        benchGrid.appendChild(card);
+        inBench.set(girl.id, card);
+        updateLockState();
+      }
+    });
+
     card.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', JSON.stringify(girl));
       requestAnimationFrame(() => card.classList.add('dragging'));
     });
     card.addEventListener('dragend', () => card.classList.remove('dragging'));
+
+    // Single tap/click to select for placement (mobile and desktop alternative to DnD)
+    card.addEventListener('click', (ev) => {
+      // If an item is selected, ignore selecting a card; keep equip mode
+      if (selection.type === 'item') return;
+      if (selection.type === 'girl' && selection.data?.id === girl.id) {
+        clearSelection();
+      } else {
+        selectGirl(girl, card);
+      }
+    });
 
     // double-clic -> toggle banc
     card.addEventListener('dblclick', () => {
@@ -159,10 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const chip = document.createElement('div');
     chip.className = `chip ${classTag(girl.class)}`;
     chip.title = girl.name;
-    chip.draggable = true;
+    chip.draggable = !IS_TOUCH;
+  const focalY = (typeof girl.focus_y === 'number') ? `${girl.focus_y}%` : '10%';
     chip.innerHTML = `
-      <img class="chip-avatar" src="${fullImg(girl.img)}" alt="${girl.name}">
-      <span class="chip-name">${girl.name}</span>
+      <img class="chip-avatar" src="${fullImg(girl.img)}" alt="${girl.name}" style="object-position:center ${focalY};">
       <span class="chip-item"></span>
     `;
 
@@ -195,13 +251,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
 
-  chip.addEventListener('click', () => {
+    // Tap to unequip item if an item is selected, otherwise remove the unit to bench
+    chip.addEventListener('click', () => {
       const cell = chip.parentElement?.closest('.cell');
-      if (cell) {
+      if (!cell) return;
+
+      // If we are in equip mode, assign item to this chip directly
+      if (selection.type === 'item') {
         const key = cellKey(cell.dataset.x, cell.dataset.y);
-        placed.delete(key);
-        cell.innerHTML = '';
+        const slot = placed.get(key);
+        if (slot) {
+          slot.itemId = selection.data.id;
+          const holder = chip.querySelector('.chip-item');
+          const item = (window.ITEMS || []).find(i => String(i.id) === String(selection.data.id));
+          if (holder && item) {
+            const tip = item.desc ? `${item.name} — ${item.desc}` : item.name;
+            holder.innerHTML = `<img class="chip-item-img" src="${fullImg(item.img)}" alt="${item.name}" title="${tip}">`;
+            const img = holder.querySelector('.chip-item-img');
+            if (img) { img.classList.add('flash'); setTimeout(()=> img.classList.remove('flash'), 600); }
+          }
+          clearSelection();
+        }
+        return;
       }
+
+      // Else, remove the unit from the board (send back to bench visually)
+      const key = cellKey(cell.dataset.x, cell.dataset.y);
+      placed.delete(key);
+      cell.innerHTML = '';
       if (!inBench.has(girl.id)) {
         const card = renderCard(girl, { source: 'bench' });
         benchGrid.appendChild(card);
@@ -273,7 +350,7 @@ function renderPick() {
   try { girl = JSON.parse(payload); } catch {}
   if (girl && girl.__type === 'item') return; // let the item handler manage it
 
-    // si même héro déjà placé ailleurs -> libère l’ancienne cellule
+  // si même héro déjà placé ailleurs -> libère l’ancienne cellule
     for (const [k, v] of placed) {
       if (v.girl.id === girl.id) {
         placed.delete(k);
@@ -300,6 +377,66 @@ function renderPick() {
     cell.appendChild(chip);
   placed.set(key, { girl, el: chip, itemId: null });
     updateLockState();
+  });
+
+  // Click-to-place/equip support
+  function placeGirlOnCell(girl, cell) {
+    if (!cell) return false;
+    const { x, y } = cell.dataset; const key = cellKey(x, y);
+    // if already placed elsewhere, free it
+    for (const [k, v] of placed) {
+      if (v.girl.id === girl.id) {
+        placed.delete(k);
+        const oldCell = board.querySelector(`.cell[data-x="${k.split(',')[0]}"][data-y="${k.split(',')[1]}"]`);
+        if (oldCell) oldCell.innerHTML = '';
+      }
+    }
+    if (!placed.has(key) && placed.size >= MAX_TEAM) return false;
+    if (placed.has(key)) {
+      const existing = placed.get(key);
+      if (existing?.el) {
+        benchGrid.appendChild(renderCard(existing.girl, { source: 'bench' }));
+        inBench.set(existing.girl.id, benchGrid.lastElementChild);
+      }
+      placed.delete(key);
+    }
+    const chip = makeChip(girl);
+    cell.innerHTML = '';
+    cell.appendChild(chip);
+    placed.set(key, { girl, el: chip, itemId: null });
+    updateLockState();
+    return true;
+  }
+
+  board.addEventListener('click', (e) => {
+    const cell = e.target.closest('.cell'); if (!cell) return;
+    if (selection.type === 'girl') {
+      const ok = placeGirlOnCell(selection.data, cell);
+      if (ok) clearSelection();
+      return;
+    }
+    if (selection.type === 'item') {
+      const key = cellKey(cell.dataset.x, cell.dataset.y);
+      const slot = placed.get(key); if (!slot) return;
+      slot.itemId = selection.data.id;
+      const chip = slot.el;
+      const holder = chip.querySelector('.chip-item');
+      const item = (window.ITEMS || []).find(i => String(i.id) === String(selection.data.id));
+      if (holder && item) {
+        const tip = item.desc ? `${item.name} — ${item.desc}` : item.name;
+        holder.innerHTML = `<img class="chip-item-img" src="${fullImg(item.img)}" alt="${item.name}" title="${tip}">`;
+        const img = holder.querySelector('.chip-item-img');
+        if (img) { img.classList.add('flash'); setTimeout(()=> img.classList.remove('flash'), 600); }
+      }
+      clearSelection();
+      return;
+    }
+  });
+
+  // Clear selection when tapping outside interactive zones
+  document.addEventListener('click', (e) => {
+    const within = e.target.closest?.('.tb-card, .tb-item, .tb-board .cell, .tb-board, .tb-pick__grid, .tb-bench__grid');
+    if (!within) clearSelection();
   });
 
   // ---- DnD bench ----
@@ -511,10 +648,12 @@ btnLock.addEventListener('click', async () => {
         rerollsLeft = Number(data?.left ?? rerollsLeft);
       } catch {}
       updateRerollUI();
-  renderPick(); // personnages
-  // also refresh the 4 item proposals
-  currentItems = choose4(ALL_ITEMS);
-  renderItems();
+      // Clear any selection to avoid confusion after refreshing candidates/items
+      clearSelection();
+      renderPick(); // personnages
+      // also refresh the 4 item proposals
+      currentItems = choose4(ALL_ITEMS);
+      renderItems();
     });
   }
 });

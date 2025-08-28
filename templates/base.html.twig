@@ -2,6 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8">
+        <link rel="icon" href="{{ asset('/images/backgrounds/logo.png') }}">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{% block title %}Acceuil{% endblock %}</title>
         {% block stylesheets %}
@@ -17,16 +18,19 @@
         {% block header %}
             <header>
                 {% block navbar %}
-                    <nav class="navbar">
+                    <nav class="navbar" role="navigation" aria-label="Navigation principale">
                         <div class="logo">
                             <img src="{{asset('/images/backgrounds/logo.png')}}" alt="">
                         </div>
+                        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-links auth-links" title="Menu">
+                            ☰
+                        </button>
                         
-                        <nav class="nav-links">
+                        <nav id="primary-links" class="nav-links">
                             <a href="{{ path('app_home') }}">Accueil</a>
                         </nav>
 
-                                                <div class="auth-links">
+                                                <div id="auth-links" class="auth-links">
                             {% if app.user %}
                                                                 <span class="mmr-badge" title="MMR actuel">
                                                                         🏆 MMR: {{ app.user.mmr }}
@@ -35,7 +39,7 @@
                                                                         {% endif %}
                                                                 </span>
                                 <a href="{{ path('app_team_builder') }}" class="btn btn-primary" >Lancer une partie</a>
-                                <a href="{{ path('me_matches') }}" class="btn btn-primary" >Lancer une partie</a>
+                                <a href="{{ path('me_matches') }}" class="btn btn-primary" >Historique</a>
                                 <form action="{{ path('app_logout') }}" method="post">
                                 
                                 <a href="{{ path('app_logout') }}">🚪 Déconnexion</a>
@@ -75,14 +79,40 @@
 
 </html>
  <script>
-// document.addEventListener('DOMContentLoaded', () => {
-//   const navbar = document.querySelector('.navbar');
-//   const toggle  = document.querySelector('.menu-toggle');
-
-//   if (navbar && toggle) {
-//     toggle.addEventListener('click', () => {
-//       navbar.classList.toggle('open');
-//     });
-//   }
-// });
-// </script>
+ document.addEventListener('DOMContentLoaded', () => {
+     const navbar = document.querySelector('.navbar');
+     const toggle  = document.querySelector('.menu-toggle');
+     if (navbar && toggle) {
+         toggle.addEventListener('click', () => {
+             const opened = navbar.classList.toggle('is-open');
+             toggle.setAttribute('aria-expanded', opened ? 'true' : 'false');
+         });
+         // close on link click (useful on mobile)
+         navbar.addEventListener('click', (e) => {
+             const a = e.target.closest('a');
+             if (!a) return;
+             if (window.matchMedia('(max-width: 900px)').matches) {
+                 navbar.classList.remove('is-open');
+                 toggle.setAttribute('aria-expanded', 'false');
+             }
+         });
+         // close on outside click
+         document.addEventListener('click', (e) => {
+             if (!navbar.classList.contains('is-open')) return;
+             if (navbar.contains(e.target) || toggle.contains(e.target)) return;
+             if (window.matchMedia('(max-width: 900px)').matches) {
+                 navbar.classList.remove('is-open');
+                 toggle.setAttribute('aria-expanded', 'false');
+             }
+         });
+         // close on Escape key
+         document.addEventListener('keydown', (e) => {
+             if (e.key !== 'Escape') return;
+             if (!navbar.classList.contains('is-open')) return;
+             navbar.classList.remove('is-open');
+             toggle.setAttribute('aria-expanded', 'false');
+             toggle.focus();
+         });
+     }
+ });
+ </script>

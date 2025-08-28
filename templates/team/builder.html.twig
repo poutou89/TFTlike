@@ -59,10 +59,10 @@
     <!-- Plateau -->
     <main class="tb-board">
       <h2>Plateau</h2>
-      <div class="board" id="board" data-cols="7" data-rows="4">
-        {# Grille 7x4, notre camp à gauche (tout le plateau est drop OK côté client) #}
+      <div class="board" id="board" data-cols="4" data-rows="4">
+        {# Grille 4x4 visible: moitié gauche seulement #}
         {% for r in 0..3 %}
-          {% for c in 0..6 %}
+          {% for c in 0..3 %}
             <div class="cell" data-x="{{ c }}" data-y="{{ r }}"></div>
           {% endfor %}
         {% endfor %}
@@ -70,7 +70,7 @@
 
       <div class="tb-actions">
         <button class="btn btn-primary" id="btn-lock" disabled>🔒 Verrouiller & Rechercher</button>
-        <div class="tb-hint">Place exactement 4 héroïnes.</div>
+  <div class="tb-hint">Place exactement 4 héroïnes. Astuce: sur mobile, tape une carte puis une case.</div>
       </div>
 
       {# Zone d'affichage des bonus de synergie #}

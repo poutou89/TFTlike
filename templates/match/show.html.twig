@@ -17,7 +17,7 @@
 
   <div class="match__layout">
     <aside class="hud hud--left">
-      <h3>Alliés</h3>
+  <h3 id="hud-allies-title">Alliés</h3>
       <ul id="hud-allies"></ul>
     </aside>
 
@@ -33,7 +33,7 @@
     </main>
 
     <aside class="hud hud--right">
-      <h3>Ennemis</h3>
+  <h3 id="hud-enemies-title">Ennemis</h3>
       <ul id="hud-enemies"></ul>
     </aside>
   </div>
@@ -60,6 +60,8 @@
   <script id="enemies-json" type="application/json">{{ enemies |json_encode()|raw }}</script>
   <script>window.ASSET_BASE = "{{ asset('') }}";</script>
   <script id="replay-json" type="application/json">{{ replay|json_encode()|raw }}</script>
+  {# Provide items catalog for icon/name resolution (safe default to empty) #}
+  <script>window.ITEMS = {{ items|default([])|json_encode()|raw }};</script>
   <script>window.BGM_URL = "{{ asset('audio/battle_theme.mp3') }}";</script>
   <script>window.SFX_VICTORY_URL = "{{ asset('audio/victory.mp3') }}";</script>
   <script>

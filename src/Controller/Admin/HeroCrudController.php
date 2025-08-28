@@ -49,7 +49,7 @@ class HeroCrudController extends AbstractCrudController
 
             AssociationField::new('role')
                 ->setFormTypeOption('choice_label', 'nom'),
-            AssociationField::new('family_id'),
+            TextField::new('family'),
         ];
     }
     

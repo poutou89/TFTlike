@@ -1,0 +1,115 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Guide — Magical Arena{% endblock %}
+
+{% block main %}
+<main class="guide-page">
+  <header class="guide-hero">
+    <div class="container">
+      <h1>Guide du jeu</h1>
+      <p>Comprends les bases du système de combat, les synergies et les objets.</p>
+      <nav class="guide-toc" aria-label="Sommaire du guide">
+        <a href="#basics">Bases du combat</a>
+        <a href="#synergies">Synergies</a>
+        <a href="#items">Objets</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </div>
+  </header>
+
+  {# Sommaire style “features” comme la home #}
+  <section class="mg-features container">
+    <div class="mg-section-header">
+      <h2>Sommaire du guide</h2>
+      <p>Retrouve les fondamentaux: combats, synergies, objets et réponses rapides.</p>
+    </div>
+    <div class="mg-grid">
+      <a class="mg-card" href="#basics">
+        <h3>Système de combat</h3>
+        <p>Déroulé d’un round, étoiles, mana/ultis & positionnement.</p>
+      </a>
+      <a class="mg-card" href="#synergies">
+        <h3>Synergies</h3>
+        <p>Familles & classes: seuils de bonus et compositions types.</p>
+      </a>
+      <a class="mg-card" href="#items">
+        <h3>Équipement</h3>
+        <p>Composants, combinaisons et objets légendaires clés.</p>
+      </a>
+      <a class="mg-card" href="#faq">
+        <h3>FAQ</h3>
+        <p>Réponses rapides aux questions courantes.</p>
+      </a>
+    </div>
+  </section>
+
+  <section id="basics" class="guide-section container">
+    <h2>Bases du système de combat</h2>
+    <ul class="bullets">
+      <li>Les combats sont automatiques: positionne tes unités puis lance le round.</li>
+      <li>Les unités attaquent, lancent des compétences (mana/ulti) et appliquent leurs passifs.</li>
+    </ul>
+
+    <div class="stats-grid">
+      <article class="mg-card">
+        <h3>Stats principales</h3>
+        <p>PV, Bouclier, Mana, Attaque, Armure, Précision, Critique, Esquive.</p>
+      </article>
+      <article class="mg-card">
+        <h3>Positionnement</h3>
+        <p>Les tanks en première ligne, les carrys protégés. Les compétences en cône/zone influencent la formation.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="synergies" class="guide-section container">
+    <h2>Synergies (Familles & Classes)</h2>
+    <p>Combiner plusieurs unités d'une même famille ou classe débloque des bonus. Quelques exemples:</p>
+    <div class="synergy-list">
+      <article class="syn mg-card">
+        <h3>Arcane</h3>
+        <p>Augmente la puissance des sorts et la génération de mana.</p>
+      </article>
+      <article class="syn mg-card">
+        <h3>Lune</h3>
+        <p>Accorde de l'esquive et des dégâts magiques nocturnes.</p>
+      </article>
+      <article class="syn mg-card">
+        <h3>Soleil</h3>
+        <p>Bonus d'attaque et rayon brûlant sur l'ultime des porte-étendards.</p>
+      </article>
+      <article class="syn mg-card">
+        <h3>Idole</h3>
+        <p>Chants de soutien: soins périodiques et vitesse d'attaque à l'équipe.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="items" class="guide-section container">
+    <h2>Objets</h2>
+    <p>Les objets renforcent tes unités. Combine les composants pour obtenir des légendaires.</p>
+    <ul class="bullets">
+      <li>Offensifs: dégâts, critique, pénétration.</li>
+      <li>Défensifs: PV, armure, bouclier, ténacité.</li>
+      <li>Utilitaires: mana, portée, vitesse de déplacement.</li>
+    </ul>
+    <div class="item-grid">
+      <div class="item-card mg-card"><span class="img"></span><strong>Baguette astrale</strong><small>+Puissance des sorts</small></div>
+      <div class="item-card mg-card"><span class="img"></span><strong>Ruban protecteur</strong><small>+Bouclier</small></div>
+      <div class="item-card mg-card"><span class="img"></span><strong>Charmant familier</strong><small>Effet spécial</small></div>
+    </div>
+  </section>
+
+  <section id="faq" class="guide-section container">
+    <h2>FAQ</h2>
+    <details>
+      <summary>Les matchs classés sont-ils disponibles ?</summary>
+      <p>Oui, progresse avec ton MMR et gagne des récompenses saisonnières.</p>
+    </details>
+  </section>
+
+  <footer class="guide-footer container">
+    <a class="btn btn-primary" href="{{ path('app_team_builder') }}">Commencer à jouer</a>
+  </footer>
+</main>
+{% endblock %}

@@ -23,6 +23,12 @@ class Role
         $this->id = new ArrayCollection();
     }
 
+    public function __toString(): string
+    {
+        // adapte si ton champ s’appelle autrement (ex: getNom())
+        return (string) $this->getNom();
+    }
+
     public function getId(): ?int
     {
         return $this->id;

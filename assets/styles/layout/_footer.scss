@@ -18,6 +18,14 @@ footer {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
                 gap: 0.5rem;
+                li {
+                    list-style: none;
+                    a {
+                        background:
+      linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.06)) padding-box,
+      linear-gradient(90deg, v.$color-primary, v.$color-accent) border-box;
+                    }
+                }
             }
         }
         p {
@@ -27,7 +35,7 @@ footer {
             a {
                 color: v.$color-primary;
                 text-decoration: none;
-
+                
                 &:hover {
                     text-decoration: underline;
                 }

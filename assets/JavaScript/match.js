@@ -2,12 +2,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!document.body.classList.contains('page-match')) return;
 
   const ASSET_BASE = (window.ASSET_BASE || '/').replace(/\/?$/, '/');
-  const full = (p) => ASSET_BASE + String(p || '').replace(/^\/+/, '');
+  const full = (p) => {
+    const s = String(p || '');
+    if (!s) return '';
+    if (/^(?:https?:|data:|blob:)/i.test(s)) return s; // absolute or data URL
+    return ASSET_BASE + s.replace(/^\/+/, '');
+  };
 
   const board    = document.getElementById('board');
   const logEl    = document.getElementById('battle-log');
   const hudA     = document.getElementById('hud-allies');
   const hudE     = document.getElementById('hud-enemies');
+  const hudATitle= document.getElementById('hud-allies-title');
+  const hudETitle= document.getElementById('hud-enemies-title');
   const btnStart = document.getElementById('btn-start');
   const btnPause = document.getElementById('btn-pause');
   const btnReset = document.getElementById('btn-reset');
@@ -19,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const REPLAY = JSON.parse(document.getElementById('replay-json')?.textContent || '{}');
+  const ALLIES = JSON.parse(document.getElementById('allies-json')?.textContent || '[]');
+  const ENEMIES= JSON.parse(document.getElementById('enemies-json')?.textContent || '[]');
   if (!REPLAY || !Array.isArray(REPLAY.initial)) { console.warn('No replay provided'); return; }
   console.debug('REPLAY:', REPLAY,
                 'allyCount=', REPLAY.initial.filter(u=>u.team==='ally').length,
@@ -74,9 +83,85 @@ document.addEventListener('DOMContentLoaded', () => {
   function log(msg){ if(!msg)return; const d=document.createElement('div'); d.textContent=msg;
     logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
 
+  // Username headers: prefer replay-provided names; else derive from allies/enemies data; else random bot name
+  function randBot(){
+    const a=['Airi','Mika','Yuna','Nia','Hana','Suki','Luna','Momo','Rin','Saya','Kira','Nova','Zoe','Aya'];
+    const b=['Fox','Star','Bloom','Dash','Wave','Heart','Spark','Song','Dream','Moon','Sky','Shine'];
+    return a[Math.floor(Math.random()*a.length)] + ' ' + b[Math.floor(Math.random()*b.length)];
+  }
+  function pickOwnerName(side){
+    if (!side) return undefined;
+    if (Array.isArray(side)) {
+      const first = side[0] || {};
+      return first.owner_name || first.username || first.player || first.user || first.owner || undefined;
+    }
+    return side.owner_name || side.username || side.player || side.user || side.owner || undefined;
+  }
+  const allyName  = REPLAY.ally_username  || REPLAY.ally_name  || pickOwnerName(ALLIES)  || REPLAY.player_ally  || randBot();
+  const enemyName = REPLAY.enemy_username || REPLAY.enemy_name || pickOwnerName(ENEMIES) || REPLAY.player_enemy || randBot();
+  if (hudATitle) hudATitle.textContent = allyName;
+  if (hudETitle) hudETitle.textContent = enemyName;
+
   function renderHUD(){
     const list = (team) => [...unitsById.values()].filter(u=>u.team===team)
-      .map(u=>`<li><img src="${full(u.img)}"><span>${u.name}</span><em>${u.hp} PV${u.shield>0?' • 🛡'+u.shield:''}${u.mana>0?' • 🔷'+u.mana:''}</em></li>`).join('');
+      .map(u=>{
+        const fams = Array.isArray(u.families)?u.families:[];
+        const itms = Array.isArray(u.items)?u.items:[];
+        const cat  = Array.isArray(window.ITEMS) ? window.ITEMS : [];
+        const toPerc = (v) => {
+          if (v == null) return null;
+          let n = Number(v);
+          if (!isFinite(n) || n <= 0) return null;
+          // Accept either 0..1 or 0..100; normalize to 0..1 then to percent
+          if (n > 1) n = n / 100;
+          return Math.round(n * 100);
+        };
+    const resolveItem = (x)=>{
+          if (typeof x === 'string') {
+            const s = x.trim();
+            if (/^(?:https?:|data:|blob:|\/)/i.test(s) || s.includes('/')) {
+              return { img: s };
+            }
+            // likely an ID or bare filename; strip extension and lookup in catalog
+            const id = s.replace(/\.[a-z0-9]+$/i, '');
+            let found = cat.find(i=>String(i.id)===String(id));
+            if (!found && /^\d+$/.test(id)) {
+              found = cat.find(i=>String(i.id)===('fc' + id));
+            }
+            if (found) return found;
+      return { img: itemPath(s) };
+          }
+          if (typeof x === 'number') {
+            const id = String(x);
+            const found = cat.find(i=>String(i.id)===id) || cat.find(i=>String(i.id)===('fc'+id));
+            return found || { img: itemPath(x) };
+          }
+          if (x && x.id && (!x.img && !x.icon && !x.image)){
+            const f = cat.find(i=>String(i.id)===String(x.id)); return f||x;
+          }
+          return x||{};
+        };
+        const itObjs = itms.map(resolveItem);
+        const armor = (u.armor!=null && Number(u.armor) > 0 ? ` • 🛡️${u.armor}` : '');
+        const accP   = toPerc(u.acc);
+        const critP  = toPerc(u.crit);
+        const dodgeP = toPerc(u.dodge);
+        const acc    = accP  != null ? ` • 🎯${accP}%`   : '';
+        const crit   = critP != null ? ` • ✶${critP}%`  : '';
+        const dodge  = dodgeP!= null ? ` • 👟${dodgeP}%` : '';
+        const stats = `${u.hp} PV${u.shield>0?` • 🛡${u.shield}`:''}${u.mana>0?` • 🔷${u.mana}`:''}${u.atk?` • ⚔️${u.atk}`:''}${armor}${acc}${crit}${dodge}`;
+        const itemsHtml = itObjs.map(it=>{
+          const src = it && (it.icon || it.img || it.image);
+          return src ? `<img class=\"item\" src=\"${full(src)}\" title=\"${it.name||''}\" alt=\"\">` : '';
+        }).join('');
+        const famHtml = fams.map(f=>`<span class="tag" title="${f.name||f}">${f.short||f.name||f}</span>`).join('');
+        return `<li>
+          <div class="hud-ava"><img src="${full(u.img)}" alt=""></div>
+          <div class="hud-name">${u.name}</div>
+          <div class="hud-stats">${stats}</div>
+          <div class="hud-meta">${itemsHtml}${famHtml}</div>
+        </li>`;
+      }).join('');
     hudA.innerHTML = list('ally'); hudE.innerHTML = list('enemy');
   }
 
@@ -111,19 +196,101 @@ document.addEventListener('DOMContentLoaded', () => {
     }catch{ /* ignore */ }
   }
 
+  // --- Helpers to merge metadata (items/families/focus) from allies/enemies arrays ---
+  function normalizeItems(raw){
+    if (!raw) return [];
+    const arr = Array.isArray(raw) ? raw : [raw];
+  return arr.map(x => x);
+  }
+  function normalizeFamilies(raw){
+    if (!raw) return [];
+    const arr = Array.isArray(raw) ? raw : [raw];
+    return arr.map(x => typeof x === 'string' ? { name: x, short: String(x).slice(0,3).toUpperCase() } : x);
+  }
+  function buildMetaIndex(list){
+    const byId = new Map(); const byName = new Map();
+    if (!Array.isArray(list)) return { byId, byName };
+    for (const e of list){
+      const id = e?.id ?? e?.unit_id ?? e?.girl_id;
+      const name = e?.name ?? e?.girl_name;
+      const meta = {
+        items: normalizeItems(e?.items ?? e?.item ?? e?.item_id),
+        families: normalizeFamilies(e?.families ?? e?.family),
+        focus_y: (e?.focus_y ?? e?.focusY ?? e?.foc_y)
+      };
+      if (id != null) byId.set(String(id), meta);
+      if (name) byName.set(String(name).toLowerCase(), meta);
+    }
+    return { byId, byName };
+  }
+  const META_ALLY  = buildMetaIndex(ALLIES);
+  const META_ENEMY = buildMetaIndex(ENEMIES);
+  const ITEM_CAT = Array.isArray(window.ITEMS) ? window.ITEMS : [];
+  const itemPath = (s) => {
+    const clean = String(s||'').trim();
+    if (!clean) return '';
+    const mExt = clean.match(/\.[a-z0-9]+$/i);
+    const hasExt = !!mExt;
+    const base = hasExt ? clean.replace(/\.[a-z0-9]+$/i, '') : clean;
+    // If base is digits-only, filenames are prefixed with 'fc'
+    const filenameBase = /^\d+$/.test(base) ? ('fc' + base) : base;
+    const ext = hasExt ? mExt[0] : '.png';
+    return 'images/items/' + filenameBase + ext;
+  };
+
   function spawnInitial(){
     board.querySelectorAll('.cell').forEach(c=>c.innerHTML=''); logEl.innerHTML=''; unitsById.clear();
     for(const u0 of REPLAY.initial){
       const u = {...u0};
+      // enrich from side data if available
+      const src = u.team === 'ally' ? META_ALLY : META_ENEMY;
+      const m = src.byId.get(String(u.id)) || (u.name ? src.byName.get(String(u.name).toLowerCase()) : null) || null;
+      if (m){
+        if (!Array.isArray(u.items)) u.items = m.items || [];
+        if (!Array.isArray(u.families)) u.families = m.families || [];
+        if (u.focus_y == null && m.focus_y != null) u.focus_y = m.focus_y;
+      } else {
+        // basic fallback if replay embeds a single item
+        if (u.item && !u.items) u.items = normalizeItems(u.item);
+      }
+      // resolve item IDs to full objects (so icons show)
+  if (Array.isArray(u.items)){
+        u.items = u.items.map(it=>{
+          if (typeof it === 'number') {
+            const id = String(it);
+            return ITEM_CAT.find(i=>String(i.id)===id) || ITEM_CAT.find(i=>String(i.id)===('fc'+id)) || { img: itemPath(id) };
+          }
+          if (typeof it === 'string') {
+            const s = it.trim();
+            if (/^(?:https?:|data:|blob:|\/)/i.test(s) || s.includes('/')) {
+              return { img: s };
+            }
+            const id = s.replace(/\.[a-z0-9]+$/i, '');
+            const found = ITEM_CAT.find(i=>String(i.id)===String(id)) || (/^\d+$/.test(id) ? ITEM_CAT.find(i=>String(i.id)===('fc'+id)) : null);
+    return found || { img: itemPath(s) };
+          }
+          if (it && it.id && (!it.img && !it.icon && !it.image)){
+            const f = ITEM_CAT.find(i=>String(i.id)===String(it.id)); return f || it;
+          }
+          return it;
+        });
+      }
       const el = document.createElement('div');
-      el.className = `unit unit--${u.team} unit--${u.class}`;
+  el.className = `unit unit--${u.team} unit--${u.class}`;
   // Portrait with per-unit bars under it
+  let focY = u.focus_y;
+  if (typeof focY !== 'number') { focY = 0.20; }
+  else if (focY > 1) { focY = focY / 100; } // accept percent
   el.innerHTML = `
-    <img src="${full(u.img)}" alt="">
+    <img src="${full(u.img)}" alt="" style="object-position:center ${Math.round(focY*100)}%">
     <div class="u-bars">
       <div class="u-bar u-bar--hp"><span></span></div>
       <div class="u-bar u-bar--mana"><span></span></div>
-    </div>`;
+    </div>
+  ${Array.isArray(u.items) && u.items.length ? `<div class="u-items">${u.items.map(it=>{
+        const src = it?.icon || it?.img || it?.image || '';
+        return src ? `<img src="${full(src)}" alt="" title="${it.name||''}">` : '';
+      }).join('')}</div>` : ''}`;
       const c = cell(u.x, u.y); if (c) c.appendChild(el);
       u.el = el; unitsById.set(u.id, u); updateBars(u);
     }

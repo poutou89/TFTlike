@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Hero;
+use App\Entity\Role;
 use App\Entity\User;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -33,6 +34,7 @@ class DashboardController extends AbstractDashboardController
     {
         yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home');
         yield MenuItem::linkToCrud('Hero', 'fa fa-home', Hero::class);
+        yield MenuItem::linkToCrud('Role', 'fa fa-home', Role::class);
         yield MenuItem::linkToCrud('User', 'fa fa-home', User::class);
         yield MenuItem::linkToRoute('Retour au site', 'fas fa-undo', 'app_home');
     }

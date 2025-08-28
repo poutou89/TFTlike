@@ -1,7 +1,7 @@
-$color-bg:        if(global-variable-exists(color-bg), $color-bg, #0c0c12);
-$color-primary:   if(global-variable-exists(color-primary), $color-primary, #b572f6); // violet néon
-$color-accent:    if(global-variable-exists(color-accent), $color-accent, #ff63d8);  // rose néon
-$color-text:      if(global-variable-exists(color-text), $color-text, #e9e9f0);
+$color-bg:        #0c0c12 !default;
+$color-primary:   #b572f6 !default; // violet néon
+$color-accent:    #ff63d8 !default;  // rose néon
+$color-text:      #e9e9f0 !default;
 $card-bg:         rgba(255,255,255,0.05);
 $card-border:     rgba(255,255,255,0.08);
 

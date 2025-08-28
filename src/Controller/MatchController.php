@@ -7,6 +7,7 @@ use App\Entity\Hero;
 use App\Entity\Team;
 use App\Repository\HeroRepository;
 use App\Repository\TeamRepository;
+use App\Service\ItemCatalog;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -62,8 +63,14 @@ final class MatchController extends AbstractController
             $replay = $this->sim->simulate($allyTeam, $enemyTeam, $seed);
         }
 
-        // 5) Normalisation dure pour garantir les clés attendues par le front
-        $replay = $this->normalizeReplay($replay, $allies, $enemies);
+    // 5) Normalisation dure pour garantir les clés attendues par le front
+    $replay = $this->normalizeReplay($replay, $allies, $enemies);
+
+    // 5bis) Joindre les pseudos réels pour affichage côté front
+    $allyUsername  = $allyTeam?->getUser()?->getUsername()  ?? ($allyTeam?->getNom() ?? 'BOT');
+    $enemyUsername = $enemyTeam?->getUser()?->getUsername() ?? ($enemyTeam?->getNom() ?? 'BOT');
+    $replay['ally_username']  = (string)$allyUsername;
+    $replay['enemy_username'] = (string)$enemyUsername;
 
         // 6) Stocke en session (utile si tu recharges)
         $request->getSession()?->set('replay_'.$match->getId(), $replay);
@@ -73,6 +80,8 @@ final class MatchController extends AbstractController
             'allies'   => $allies,
             'enemies'  => $enemies,
             'replay'   => $replay,
+            // catalogue des objets pour résoudre id -> icône/nom côté front
+            'items'    => ItemCatalog::list(),
         ]);
     }
 

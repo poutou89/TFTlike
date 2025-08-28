@@ -8,13 +8,4 @@
     }
 }
 
-@media screen and (max-width: 1000px) {
-    .page-team {
-        .container {
-            .tb-layout {
-                display: flex;
-                flex-direction: column;
-            }
-        }
-    }
-}
+/* Team page has its own responsive rules in layout/_team.scss */
