@@ -90,7 +90,7 @@
 
   .unit {
     /* Centered, image-only figure on the board */
-    position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
+  position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
     background: transparent; border:none; box-shadow: none;
 
     /* Hide numeric badges on the board for a clean look */

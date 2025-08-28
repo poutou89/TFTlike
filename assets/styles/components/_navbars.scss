@@ -54,8 +54,8 @@
   /* hamburger toggle hidden by default on large screens */
   .menu-toggle { display: none; align-items: center; justify-content: center; gap: .4rem;
   padding: .4rem .55rem; border-radius: .6rem; background: rgba(255,255,255,.08);
-    border: 1px solid rgba(255,255,255,.18); color: v.$color-text; cursor: pointer;
-    transition: background .18s, transform .18s;
+    border: 1px solid rgba(255,255,255,.18); color: v.$color-accent;; cursor: pointer;
+    transition: background .18s, transform .18s; 
   }
   .menu-toggle:hover { background: rgba(255,255,255,.12); transform: translateY(-1px); }
 

@@ -2,10 +2,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!document.body.classList.contains('page-match')) return;
 
   const ASSET_BASE = (window.ASSET_BASE || '/').replace(/\/?$/, '/');
+  // Inline SVG fallback avatar (avoids 404s on mobile)
+  const FALLBACK_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="160" viewBox="0 0 128 160"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%25" stop-color="%231a1a24"/><stop offset="100%25" stop-color="%23222233"/></linearGradient></defs><rect fill="url(%23g)" width="128" height="160"/><circle cx="64" cy="64" r="28" fill="%23333a48"/><rect x="34" y="106" width="60" height="30" rx="6" fill="%23333a48"/><text x="50%25" y="148" dominant-baseline="middle" text-anchor="middle" fill="%239aa0aa" font-family="Arial, sans-serif" font-size="10">Aucun portrait</text></svg>';
   const full = (p) => {
     const s = String(p || '');
     if (!s) return '';
-    if (/^(?:https?:|data:|blob:)/i.test(s)) return s; // absolute or data URL
+    // Absolute URLs or special schemes
+    if (/^(?:https?:|data:|blob:)/i.test(s)) return s;
+    // Root-relative path: already absolute on same origin
+    if (s.startsWith('/')) return s;
+    // Common assets under public/images → force root-absolute
+    if (s.startsWith('images/')) return '/' + s;
+    // Fallback: prefix with app base (handles subdir installs)
     return ASSET_BASE + s.replace(/^\/+/, '');
   };
 
@@ -163,6 +171,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </li>`;
       }).join('');
     hudA.innerHTML = list('ally'); hudE.innerHTML = list('enemy');
+    // Fallback avatar if an image fails to load (mobile-safe)
+    const setFallback = (img)=>{
+  const fb = FALLBACK_AVATAR;
+  if (img && img.src !== fb) img.src = fb;
+    };
+    hudA.querySelectorAll('.hud-ava img').forEach(img=>{ img.addEventListener('error', ()=> setFallback(img)); });
+    hudE.querySelectorAll('.hud-ava img').forEach(img=>{ img.addEventListener('error', ()=> setFallback(img)); });
   }
 
   function updateBars(u){
@@ -292,6 +307,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return src ? `<img src="${full(src)}" alt="" title="${it.name||''}">` : '';
       }).join('')}</div>` : ''}`;
       const c = cell(u.x, u.y); if (c) c.appendChild(el);
+      // Robust portrait fallback on error
+      const portrait = el.querySelector('img');
+      if (portrait) {
+        portrait.addEventListener('error', ()=>{
+          const fb = FALLBACK_AVATAR;
+          if (portrait.src !== fb) portrait.src = fb;
+        });
+      }
       u.el = el; unitsById.set(u.id, u); updateBars(u);
     }
   renderHUD();
