@@ -18,7 +18,7 @@
 					<div class="mg-cta">
 						<a class="btn btn-primary" href="{{ path('app_team_builder') }}">Jouer</a>
 						<a class="btn btn-ghost" href="{{ path('app_guide') }}">Guide</a>
-						<a class="btn btn-ghost">Collection</a>
+						<a class="btn btn-ghost" href="{{ path('app_collection') }}">Collection</a>
 					</div>
 				</div>
 				<div
@@ -84,7 +84,7 @@
 								</div>
 								<div class="mg-unit__meta">
 									<h4>{{ g.name }}</h4>
-									<button class="tag">Voir</button>
+									
 								</div>
 							</div>
 						</div>
@@ -120,7 +120,7 @@
 			</div>
 
 			<div class="mg-center mt-6">
-				<a href="#" class="btn btn-primary btn-down">Lancer une partie</a>
+				<a class="btn btn-primary" href="{{ path('app_team_builder') }}">Lancer une partie</a>
 			</div>
 		</section>
 	</main>

@@ -1,0 +1,198 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Collection{% endblock %}
+{% block body_class %}page-collection{% endblock %}
+
+{% block main %}
+<section class="collection container">
+  <header class="mg-section-header">
+    <h1>Collection</h1>
+    <p>Parcourir toutes les héroïnes disponibles.</p>
+    <div class="coll-filters" id="coll-filters">
+      <input id="coll-q" class="coll-filter__search" type="search" placeholder="Rechercher un nom…" autocomplete="off" />
+      <div class="coll-filter__pills" id="coll-classes" role="tablist" aria-label="Filtrer par classe">
+        <button type="button" class="pill is-active" data-class="">Tous</button>
+        <button type="button" class="pill" data-class="dps_melee">DPS CàC</button>
+        <button type="button" class="pill" data-class="dps_ranged">DPS distance</button>
+        <button type="button" class="pill" data-class="tank">Tank</button>
+        <button type="button" class="pill" data-class="healer">Healer</button>
+      </div>
+      <div class="coll-filter__family">
+        <span id="coll-family-label">Famille</span>
+        <div class="select" id="coll-family" data-value="">
+          <button class="select__button" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="coll-family-label select-family-label">
+            <span id="select-family-label">Toutes familles</span>
+            <svg class="select__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <ul class="select__menu" role="listbox" tabindex="-1"></ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="coll-grid" id="coll-grid">
+    {% for g in heroes %}
+      <button class="coll-card" type="button" data-id="{{ g.id }}" data-name="{{ g.name }}" data-class="{{ g.class }}" data-family="{{ g.family|default('') }}" data-pdv="{{ g.pdv }}" data-atk="{{ g.atk }}" data-mana="{{ g.mana }}" data-shield="{{ g.shield }}" data-chance_atk="{{ g.chance_atk }}" data-img="{{ asset(g.img) }}">
+        <span class="coll-card__img"><img src="{{ asset(g.img) }}" alt="{{ g.name }}"></span>
+        <span class="coll-card__name">{{ g.name }}</span>
+      </button>
+    {% else %}
+      <p>Aucun personnage.</p>
+    {% endfor %}
+  </div>
+
+  <div class="coll-modal" id="coll-modal" aria-hidden="true" role="dialog">
+    <div class="coll-modal__veil" data-close></div>
+    <div class="coll-modal__panel" role="document">
+      <button class="coll-modal__close" type="button" aria-label="Fermer" data-close>×</button>
+      <div class="coll-modal__body">
+        <div class="coll-modal__img"><img src="" alt=""></div>
+        <div class="coll-modal__meta">
+          <h2 class="coll-modal__name"></h2>
+          <div class="coll-modal__tags">
+            <span class="tag tag-class"></span>
+            <span class="tag tag-family"></span>
+          </div>
+          <ul class="coll-stats">
+            <li><strong>PV</strong> <span data-k="pdv"></span></li>
+            <li><strong>ATK</strong> <span data-k="atk"></span></li>
+            <li><strong>Mana</strong> <span data-k="mana"></span></li>
+            <li><strong>Bouclier</strong> <span data-k="shield"></span></li>
+            <li><strong>Précision</strong> <span data-k="chance_atk"></span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const grid = document.getElementById('coll-grid');
+  const modal = document.getElementById('coll-modal');
+  const cards = () => Array.from(grid.querySelectorAll('.coll-card'));
+  const qInput = document.getElementById('coll-q');
+  const clsPills = document.getElementById('coll-classes');
+  const famSel = document.getElementById('coll-family');
+  const famBtn = famSel?.querySelector('.select__button');
+  const famMenu = famSel?.querySelector('.select__menu');
+  const closeEls = modal.querySelectorAll('[data-close]');
+  const imgEl = modal.querySelector('.coll-modal__img img');
+  const nameEl = modal.querySelector('.coll-modal__name');
+  const tagClass = modal.querySelector('.tag-class');
+  const tagFam = modal.querySelector('.tag-family');
+  const stat = (k, v) => { const el = modal.querySelector(`[data-k="${k}"]`); if (el) el.textContent = v; };
+
+  const classLabel = (cls) => ({ dps_melee: 'DPS CàC', dps_ranged: 'DPS distance', tank: 'Tank', healer: 'Healer' }[cls] || cls);
+  const open = (card) => {
+    imgEl.src = card.dataset.img;
+    imgEl.alt = card.dataset.name;
+    nameEl.textContent = card.dataset.name;
+    tagClass.textContent = classLabel(card.dataset.class);
+    tagClass.className = `tag tag-${card.dataset.class?.includes('ranged')?'ranged':card.dataset.class?.includes('melee')?'melee':card.dataset.class}`;
+    tagFam.textContent = card.dataset.family || '';
+    ['pdv','atk','mana','shield'].forEach(k => stat(k, card.dataset[k] || 0));
+    stat('chance_atk', `${Math.round((parseFloat(card.dataset.chance_atk || '0'))*100)}%`);
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden','false');
+  };
+  const close = () => { modal.classList.remove('is-open'); modal.setAttribute('aria-hidden','true'); };
+
+  grid?.addEventListener('click', (e) => {
+    const card = e.target.closest('.coll-card'); if (!card) return;
+    open(card);
+  });
+  closeEls.forEach(el => el.addEventListener('click', close));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('is-open')) close(); });
+
+  // ---- Filters ----
+  // Filter state (shared)
+  const state = { q: '', cls: '', fam: '' };
+
+  // Populate family options in custom dropdown
+  const families = Array.from(new Set(cards().map(c => (c.dataset.family || '').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+  const buildFamMenu = () => {
+    if (!famMenu) return;
+    famMenu.innerHTML = '';
+    const makeItem = (val, label) => {
+      const li = document.createElement('li');
+      li.className = 'select__option';
+      li.setAttribute('role','option');
+      li.dataset.value = (val || '').toLowerCase();
+      li.textContent = label;
+      if (state.fam === li.dataset.value) li.classList.add('is-selected');
+      li.addEventListener('click', () => {
+        state.fam = li.dataset.value;
+        famSel.dataset.value = state.fam;
+        const lbl = famSel.querySelector('#select-family-label'); if (lbl) lbl.textContent = label;
+        famMenu.querySelectorAll('.select__option').forEach(o=>o.classList.remove('is-selected'));
+        li.classList.add('is-selected');
+        famSel.classList.remove('is-open');
+        famBtn?.setAttribute('aria-expanded','false');
+        applyFilters();
+      });
+      return li;
+    };
+    famMenu.appendChild(makeItem('', 'Toutes familles'));
+    families.forEach(f => famMenu.appendChild(makeItem(f, f)));
+  };
+  buildFamMenu();
+
+  const applyFilters = () => {
+    const term = state.q.toLowerCase().trim();
+    let shown = 0;
+    cards().forEach(card => {
+      const name = (card.dataset.name || '').toLowerCase();
+      const ccls = (card.dataset.class || '');
+      const cfam = (card.dataset.family || '').toLowerCase();
+      const okQ = term === '' || name.includes(term);
+      const okC = state.cls === '' || ccls === state.cls;
+      const okF = state.fam === '' || cfam === state.fam;
+      const vis = okQ && okC && okF;
+      card.style.display = vis ? '' : 'none';
+      if (vis) shown++;
+    });
+    // optional: show an empty message
+    let empty = document.getElementById('coll-empty');
+    if (!empty) { empty = document.createElement('p'); empty.id = 'coll-empty'; empty.textContent = 'Aucun résultat.'; empty.style.display = 'none'; grid.after(empty); }
+    empty.style.display = shown === 0 ? '' : 'none';
+  };
+
+  qInput?.addEventListener('input', (e) => { state.q = e.target.value || ''; applyFilters(); });
+  clsPills?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.pill'); if (!btn) return;
+    clsPills.querySelectorAll('.pill').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    state.cls = btn.dataset.class || '';
+    applyFilters();
+  });
+  // Dropdown interactions
+  famBtn?.addEventListener('click', () => {
+    const open = !famSel.classList.contains('is-open');
+    famSel.classList.toggle('is-open', open);
+    famBtn.setAttribute('aria-expanded', String(open));
+    if (open) {
+      // focus first selected or first option
+      const current = famMenu.querySelector('.is-selected') || famMenu.querySelector('.select__option');
+      current && current.scrollIntoView({ block: 'nearest' });
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!famSel) return;
+    if (!famSel.contains(e.target)) { famSel.classList.remove('is-open'); famBtn?.setAttribute('aria-expanded','false'); }
+  });
+  famBtn?.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault(); famSel.classList.add('is-open'); famBtn.setAttribute('aria-expanded','true');
+    }
+  });
+  famMenu?.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { famSel.classList.remove('is-open'); famBtn?.setAttribute('aria-expanded','false'); famBtn?.focus(); }
+  });
+
+  applyFilters();
+});
+</script>
+{% endblock %}
+
+{# styles provided by assets/styles/layout/_collection.scss #}

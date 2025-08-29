@@ -2,12 +2,15 @@
 
 /* Scoper à la page */
 .page-team {
-  .container { width: min(1200px, 94%); margin-inline: auto; }
 
+  .container { 
+    width: min(1200px, 94%); margin-inline: auto; }
+  
   .tb-header {
     text-align: center; color: v.$color-text; margin: 1.2rem 0 1rem;
     h1 { font-family: v.$font-display, inherit; text-shadow: 0 2px 12px rgba(0,0,0,.45); }
-    p { opacity: .9; }
+    p { opacity: .9; margin: 0.4rem 0 0;
+      text-shadow: 0px 2px 3px black;}
   }
   
   .tb-layout {
@@ -20,7 +23,7 @@
     @media (max-width: 860px) {
       grid-template-columns: 1fr;
     }
-
+    margin-bottom: 3rem;
   .tb-sidebar, .tb-board {
     background:
       linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.06)) padding-box,
@@ -78,6 +81,56 @@
   .tb-item.is-selected { outline: 2px solid v.$color-accent; box-shadow: 0 0 0 3px rgba(v.$color-accent,.35); }
   .tb-item:hover { transform: translateY(-1px) scale(1.05); border-color: rgba(255,255,255,.35); box-shadow: 0 6px 16px rgba(0,0,0,.25), 0 0 10px rgba(v.$color-accent,.35); }
 
+  /* Banc d’objets */
+  .tb-items-bench { margin-top: 1rem; }
+  .tb-items-bench__head { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.5rem; }
+  .tb-items-bench__grid {
+    min-height: 84px;
+    border: 1px dashed rgba(255,255,255,.25);
+    border-radius: 12px;
+    background: rgba(255,255,255,.05);
+    display: grid;
+    grid-template-columns: repeat(6, minmax(52px, 1fr));
+    gap: .5rem;
+    align-items: start;
+    padding: .6rem;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    &.is-dropping { border-color: rgba(v.$color-accent,.6); box-shadow: 0 0 0 3px rgba(v.$color-accent,.25) inset; }
+    @media (max-width: 600px) {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(68px, 24%);
+      grid-template-columns: unset;
+      overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      .bench-item { scroll-snap-align: start; }
+    }
+  }
+  .bench-item {
+    position: relative;
+    display: grid; place-items: center;
+    width: 100%; aspect-ratio: 1 / 1;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 10px;
+    cursor: grab; user-select: none;
+    transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease;
+    &:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.35); box-shadow: 0 6px 16px rgba(0,0,0,.25), 0 0 10px rgba(v.$color-accent,.35); }
+    &.dragging { opacity:.8; transform: scale(.98); }
+  }
+  .bench-item__img {
+    width: 40px; height: 40px; border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.5);
+    background: rgba(255,255,255,.85); object-fit: cover;
+  }
+  .bench-item__remove {
+    position: absolute; top: 4px; right: 4px; z-index: 2;
+    width: 20px; height: 20px; border-radius: 6px;
+    display: grid; place-items: center;
+    background: rgba(0,0,0,.35); color: #fff; border: 1px solid rgba(255,255,255,.35);
+    font-size: 14px; line-height: 1; cursor: pointer;
+  }
+
   .tb-pick__grid {
     display: grid;
     gap: .8rem;
@@ -126,18 +179,20 @@
     background: radial-gradient(600px 300px at 40% 10%, rgba(v.$color-primary,.2), transparent);
     img { max-width: 90%; max-height: 90%; object-fit: contain; }
   }
-  .tb-card__meta { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+  .tb-card__meta { display:flex; flex-direction: column; align-items:center; justify-content:space-between; gap:.5rem; }
   .tb-card__name { font-weight:800; }
   .tb-card__stats { display:flex; gap:.4rem; font-size:.8rem; opacity:.9; }
 
   /* Plateau */
   .tb-board .board {
+    background-size: cover;
+  position: relative;
     display:grid;
     grid-template-columns: repeat(4, 1fr); /* left half only */
     grid-template-rows: repeat(4, 92px);
     gap: .35rem;
     padding:.4rem;
-    background: rgba(10,6,20,.35);
+
     border:1px solid rgba(255,255,255,.15);
     border-radius: 14px;
     position:relative;
@@ -150,7 +205,7 @@
   .tb-board .cell {
     background:
       linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.05)) padding-box,
-      linear-gradient(120deg, rgba(255,255,255,.18), rgba(255,255,255,.08)) border-box;
+      linear-gradient(120deg, v.$color-accent, rgba(v.$color-primary,.2)) border-box;
     border: 1px solid transparent;
     border-radius: 12px;
     position: relative;

@@ -4,7 +4,7 @@
 
 {% block main %}
 <main class="guide-page">
-  <header class="guide-hero">
+  <div class="guide-hero">
     <div class="container">
       <h1>Guide du jeu</h1>
       <p>Comprends les bases du système de combat, les synergies et les objets.</p>
@@ -15,39 +15,16 @@
         <a href="#faq">FAQ</a>
       </nav>
     </div>
-  </header>
+  </div>
 
   {# Sommaire style “features” comme la home #}
-  <section class="mg-features container">
-    <div class="mg-section-header">
-      <h2>Sommaire du guide</h2>
-      <p>Retrouve les fondamentaux: combats, synergies, objets et réponses rapides.</p>
-    </div>
-    <div class="mg-grid">
-      <a class="mg-card" href="#basics">
-        <h3>Système de combat</h3>
-        <p>Déroulé d’un round, étoiles, mana/ultis & positionnement.</p>
-      </a>
-      <a class="mg-card" href="#synergies">
-        <h3>Synergies</h3>
-        <p>Familles & classes: seuils de bonus et compositions types.</p>
-      </a>
-      <a class="mg-card" href="#items">
-        <h3>Équipement</h3>
-        <p>Composants, combinaisons et objets légendaires clés.</p>
-      </a>
-      <a class="mg-card" href="#faq">
-        <h3>FAQ</h3>
-        <p>Réponses rapides aux questions courantes.</p>
-      </a>
-    </div>
-  </section>
+
 
   <section id="basics" class="guide-section container">
     <h2>Bases du système de combat</h2>
     <ul class="bullets">
-      <li>Les combats sont automatiques: positionne tes unités puis lance le round.</li>
-      <li>Les unités attaquent, lancent des compétences (mana/ulti) et appliquent leurs passifs.</li>
+      <li><p>Les combats sont automatiques: positionne tes unités puis lance le round.</p></li>
+      <li><p>Les unités attaquent, lancent des compétences (mana/ulti) et appliquent leurs passifs.</p></li>
     </ul>
 
     <div class="stats-grid">
@@ -89,9 +66,9 @@
     <h2>Objets</h2>
     <p>Les objets renforcent tes unités. Combine les composants pour obtenir des légendaires.</p>
     <ul class="bullets">
-      <li>Offensifs: dégâts, critique, pénétration.</li>
-      <li>Défensifs: PV, armure, bouclier, ténacité.</li>
-      <li>Utilitaires: mana, portée, vitesse de déplacement.</li>
+      <li><p>Offensifs: dégâts, critique, pénétration.</p></li>
+      <li><p>Défensifs: PV, armure, bouclier, ténacité.</p></li>
+      <li><p>Utilitaires: mana, portée, vitesse de déplacement.</p></li>
     </ul>
     <div class="item-grid">
       <div class="item-card mg-card"><span class="img"></span><strong>Baguette astrale</strong><small>+Puissance des sorts</small></div>

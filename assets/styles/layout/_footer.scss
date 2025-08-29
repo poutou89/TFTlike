@@ -2,9 +2,14 @@
 
 footer {
 
-
-    background: linear-gradient(180deg, rgba(255, 99, 216, 0.22), rgba(181, 114, 246, 0.18));
-    .footer-content {
+    
+    
+    background: linear-gradient(180deg, rgba(v.$color-accent,.22), rgba(v.$color-primary,.18));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 8px 26px rgba(0,0,0,.20);
+        .footer-content {
         max-width: 1200px;
         margin: 0 auto;
         padding: 1rem;

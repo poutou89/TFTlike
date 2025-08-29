@@ -20,6 +20,7 @@ public function index(Request $request, HeroRepository $heroRepo): Response
     if (!$user) {
         return $this->redirectToRoute('app_login');
     }
+    $session = $request->getSession();
     $all = $heroRepo->findAll();
     // --- héroïnes possédées / déjà dans l’équipe ---
     $owned = $heroRepo->findOwnedByUserViaTeams($user);
@@ -29,10 +30,13 @@ public function index(Request $request, HeroRepository $heroRepo): Response
     $pool = $all;
 
     // --- tirage déterministe avec seed (utile pour bouton "Re-tirer") ---
+    // Si un match vient de se terminer, on force une nouvelle seed même si l'URL en fournit une
+    $forceNew = (bool) $session->get('tb_require_new_seed', false);
     $seed = $request->query->getInt('s', 0);
-    if ($seed === 0) {
+    if ($forceNew || $seed === 0) {
         $seed = random_int(1, PHP_INT_MAX);
-        // on redirige pour porter le seed dans l’URL (refresh propre)
+        // clear the flag and redirect with fresh seed in URL (refresh propre)
+        if ($forceNew) { $session->remove('tb_require_new_seed'); }
         return $this->redirectToRoute('app_team_builder', ['s' => $seed]);
     }
 
@@ -41,8 +45,7 @@ public function index(Request $request, HeroRepository $heroRepo): Response
     usort($pool, fn(Hero $a, Hero $b) => $hash($a) <=> $hash($b));
     $picks = array_slice($pool, 0, 8); // 8 suggestions
 
-        // rerolls persistant en session
-        $session = $request->getSession();
+    // rerolls persistant en session
         $left = $session->get('rerolls_left', 3);
         if (!is_int($left) || $left < 0) { $left = 3; $session->set('rerolls_left', $left); }
 

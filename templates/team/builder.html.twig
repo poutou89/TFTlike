@@ -5,10 +5,10 @@
 
 {% block main %}
 <section class="team-builder container">
-  <header class="tb-header">
+  <div class="tb-header">
     <h1>Création d’équipe</h1>
     <p>Choisis 4 Magical Girls aléatoires parmi ta collection, place-les sur le plateau, puis lance une recherche de combat.</p>
-  </header>
+  </div>
 
   <div class="tb-layout">
     <!-- Colonne gauche : tirage & banc -->
@@ -30,6 +30,15 @@
           {% endfor %}
         </div>
       </div>
+      
+      <!-- Banc d'objets -->
+      <section class="tb-items-bench">
+        <div class="tb-items-bench__head">
+          <h2>Banc d’objets</h2>
+          <small><span data-js="bench-count">0</span>/<span data-js="bench-capacity">12</span></small>
+        </div>
+        <div class="tb-items-bench__grid" id="items-bench" aria-label="Banc d’objets"></div>
+      </section>
       <div class="tb-pick">
         <div class="tb-pick__head">
           <h2>Tirage</h2>
@@ -37,7 +46,39 @@
             🔄 Re-tirer <span id="reroll-count" style="margin-left:.35rem;opacity:.85"></span>
           </button>
         </div>
-        <div class="tb-pick__grid" id="pick-grid"><!-- cartes tirage rendues par JS --></div>
+        <div class="tb-pick__grid" id="pick-grid">
+          {# Fallback SSR: show initial picks so characters are visible even if JS fails.
+             JS will clear and re-render on load. #}
+          {% set picks = suggested_girls|default([])|slice(0,4) %}
+          {% if picks is empty and owned_girls is defined %}
+            {% set picks = owned_girls|slice(0,4) %}
+          {% endif %}
+          {% for g in picks %}
+            <div class="tb-card tb-card--{{ g.class }}" data-id="{{ g.id }}" data-source="pick">
+              <button class="tb-card__bench-btn" type="button" title="Ajouter au banc" aria-label="Ajouter au banc">🧺</button>
+              <div class="tb-card__img">
+                <img src="{{ asset(g.img) }}" alt="{{ g.name }}">
+              </div>
+              <div class="tb-card__meta">
+                <div class="tb-card__name">{{ g.name }}</div>
+                <div class="tb-card__tags">
+                  {% set cls = g.class %}
+                  {% set tagClass = cls == 'dps_melee' ? 'tag-melee' : (cls == 'dps_ranged' ? 'tag-ranged' : (cls == 'tank' ? 'tag-tank' : 'tag-heal')) %}
+                  {% set tagLabel = cls == 'dps_melee' ? 'DPS CàC' : (cls == 'dps_ranged' ? 'DPS distance' : (cls == 'tank' ? 'Tank' : 'Healer')) %}
+                  <span class="tag {{ tagClass }}">{{ tagLabel }}</span>
+                  <span class="tag tag-family">{{ g.family|default('') }}</span>
+                </div>
+              </div>
+              <div class="tb-card__stats">
+                <span>PV {{ g.pdv }}</span>
+                <span>ATK {{ g.atk }}</span>
+                <span>PRC {{ (g.chance_atk * 100)|round }}%</span>
+              </div>
+            </div>
+          {% else %}
+            <div class="tb-items__empty">Aucune héroïne disponible pour le tirage.</div>
+          {% endfor %}
+        </div>
       </div>
 
       <div class="tb-bench">
@@ -59,7 +100,7 @@
     <!-- Plateau -->
     <main class="tb-board">
       <h2>Plateau</h2>
-      <div class="board" id="board" data-cols="4" data-rows="4">
+  <div class="board" id="board" data-cols="4" data-rows="4" style="background-image:url('{{ asset('/images/backgrounds/bg_team.png') }}')">
         {# Grille 4x4 visible: moitié gauche seulement #}
         {% for r in 0..3 %}
           {% for c in 0..3 %}
@@ -125,7 +166,19 @@
     status: "{{ path('matchmaking_status', {ticketId:'__ID__'}) }}",  // we replace __ID__ in JS
     cancel: "{{ path('matchmaking_cancel', {ticketId: 0})|replace({'/0':'/'}) }}"
   };
+  // current deterministic seed (present in URL as ?s=...)
+  window.SEED = {{ seed|default(0) }};
   window.REROLLS_LEFT = {{ rerolls_left|default(3) }};
   window.REROLL_DEC_URL = "{{ path('app_team_reroll_dec') }}";
 </script>
+{% endblock %}
+
+{# Page-specific background without touching SCSS build resolution #}
+{% block stylesheets %}
+  {{ parent() }}
+  <style>
+    body.page-team {
+      background: url('{{ asset('/images/backgrounds/Bg.png') }}') center / cover fixed no-repeat;
+    }
+  </style>
 {% endblock %}

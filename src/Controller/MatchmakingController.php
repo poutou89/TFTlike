@@ -43,7 +43,7 @@ class MatchmakingController extends AbstractController
                 $team->addHero($hero);
             }
         }
-        $em->persist($team);
+    $em->persist($team);
         $em->flush();
 
         $em->beginTransaction();
@@ -58,13 +58,16 @@ class MatchmakingController extends AbstractController
                 ->setLockMode(LockMode::PESSIMISTIC_WRITE)
                 ->getOneOrNullResult();
 
-            if ($opponent) {
+                if ($opponent) {
                 $match = new GameMatch();
                 $em->persist($match);
 
                 $team->setGameMatch($match)->setStatus('matched');
                 $opponent->setGameMatch($match)->setStatus('matched');
                 $em->flush();
+
+                // After a successful match creation, reset rerolls so user can reroll again next time
+                $request->getSession()->set('rerolls_left', 3);
                 $em->commit();
 
                 // REPLAY déterministe et stockage
@@ -124,6 +127,9 @@ class MatchmakingController extends AbstractController
                 $request->getSession()->set('replay_'.$match->getId(), $replay);
 
                 $em->flush();
+
+                // After matching vs real opponent, next time builder opens, use a fresh seed
+                $request->getSession()->set('tb_require_new_seed', true);
                 return $this->json(['status' => 'matched', 'matchId' => $match->getId()]);
             }
 
@@ -195,7 +201,10 @@ class MatchmakingController extends AbstractController
 
         $team->setGameMatch($match)->setStatus('matched');
         $botTeam->setGameMatch($match)->setStatus('matched');
-        $em->flush();
+    $em->flush();
+
+    // Matched vs BOT: also reset rerolls for next builder visit
+    $request->getSession()->set('rerolls_left', 3);
 
     $seed   = self::seedFor($match->getId(), $team->getId(), $botTeam->getId());
     $replay = $this->sim->simulate($team, $botTeam, $seed);
@@ -204,7 +213,7 @@ class MatchmakingController extends AbstractController
         if (method_exists($match, 'setReplay')) $match->setReplay($replay);
         if (method_exists($match, 'setWinner')) $match->setWinner($replay['winner'] ?? null);
         if (method_exists($match, 'setFinishedAt')) $match->setFinishedAt(new \DateTimeImmutable());
-        $em->flush();
+    $em->flush();
 
         $request->getSession()->set('replay_'.$match->getId(), $replay);
 
@@ -235,9 +244,12 @@ class MatchmakingController extends AbstractController
         }
         // ne pas modifier le MMR du BOT
         $em->flush();
-        // --------------------------------------------
+    // --------------------------------------------
 
-        return $this->json(['status' => 'matched', 'matchId' => $match->getId()]);
+    // After BOT match, also enforce a fresh seed on next builder visit
+    $request->getSession()->set('tb_require_new_seed', true);
+
+    return $this->json(['status' => 'matched', 'matchId' => $match->getId()]);
     }
 
     #[Route('/cancel/{ticketId}', name: 'matchmaking_cancel', methods: ['POST'])]

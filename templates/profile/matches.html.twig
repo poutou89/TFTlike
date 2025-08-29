@@ -18,8 +18,8 @@
           {% set t = r[0] ?? r.t ?? r %}
           {% set m = r.m ?? (t.gameMatch ?? null) %}
           {% set opp = r.opp ?? null %}
-
-          {% set oppName = opp and opp.user ? opp.user.username : 'BOT / inconnu' %}
+          {% set oppName = r.oppName ?? (opp and opp.user ? opp.user.username : null) %}
+          {% set oppName = oppName ?? 'BOT / inconnu' %}
           {% set isFinished = m and m.finishedAt %}
           {% set when = m and (m.finishedAt ?? m.startedAt ?? m.createdAt) %}
           {% set status = m ? (m.status ?? 'pending') : 'pending' %}

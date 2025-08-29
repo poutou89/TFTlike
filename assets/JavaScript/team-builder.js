@@ -21,12 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const benchGrid = document.getElementById('bench-grid');
   const board     = document.getElementById('board');
   const itemsGrid = document.getElementById('items-grid');
+  const itemsBench = document.getElementById('items-bench');
+  const itemsBenchCount = document.querySelector('[data-js="bench-count"]');
+  const itemsBenchCap = document.querySelector('[data-js="bench-capacity"]');
   const btnReroll = document.getElementById('btn-reroll');
   const rerollCountEl = document.getElementById('reroll-count');
   const btnLock   = document.getElementById('btn-lock');
   const bonusList = document.getElementById('team-bonuses');
   const skeleton  = document.getElementById('search-skeleton');
   const hintEl    = document.querySelector('.tb-hint');
+  const CUR_SEED  = Number(window.SEED || 0);
   // Floating drag label for items
   let dragTip = null; const getDragTip = () => {
     if (dragTip) return dragTip;
@@ -46,6 +50,84 @@ document.addEventListener('DOMContentLoaded', () => {
   const placed    = new Map(); // "x,y" -> { girl, el, itemId }
   const inBench   = new Map(); // girlId -> cardElement
   const ALL_ITEMS = Array.isArray(window.ITEMS) ? window.ITEMS : [];
+  const ITEM_MIME = 'application/x-tft-item';
+  const BENCH_CAP = 12;
+  if (itemsBenchCap) itemsBenchCap.textContent = String(BENCH_CAP);
+
+  // --- Seed/picks persistence (by seed) ---
+  const LS_PICKS_KEY = (seed) => `tb.picks.${seed}`;
+  function loadPicks(seed) {
+    try { return JSON.parse(localStorage.getItem(LS_PICKS_KEY(seed)) || 'null'); } catch { return null; }
+  }
+  function savePicks(seed, picks) {
+    try { localStorage.setItem(LS_PICKS_KEY(seed), JSON.stringify(picks)); } catch {}
+  }
+  function clearAllPicks() {
+    // clean all past pick caches to avoid bloat
+    try {
+      Object.keys(localStorage).filter(k=> k.startsWith('tb.picks.')).forEach(k=> localStorage.removeItem(k));
+    } catch {}
+  }
+
+  // Simple items bench persistence
+  let ITEM_BENCH = loadItemBench();
+  function loadItemBench(){
+    try { return JSON.parse(localStorage.getItem('tb.itemsBench') || '[]'); } catch { return []; }
+  }
+  function saveItemBench(){
+    localStorage.setItem('tb.itemsBench', JSON.stringify(ITEM_BENCH));
+    if (itemsBenchCount) itemsBenchCount.textContent = String(ITEM_BENCH.length);
+  }
+  function findItemById(id){ return (window.ITEMS||[]).find(i=> String(i.id)===String(id)); }
+  function itemPayload(it){ return { id: String(it.id), icon: fullImg(it.img), name: it.name||'' }; }
+  // Helper: add item to items bench (no duplicates, capacity)
+  function addItemToBench(it){
+    if (!it || it.id == null || !itemsBench) return false;
+    if (ITEM_BENCH.some(x => String(x.id) === String(it.id))) {
+      const n = itemsBench.querySelector(`.bench-item[data-id="${String(it.id)}"]`);
+      if (n) { n.classList.add('dragging'); setTimeout(()=> n.classList.remove('dragging'), 350); }
+      return false;
+    }
+    if (ITEM_BENCH.length >= BENCH_CAP) return false;
+    ITEM_BENCH.push({ id: it.id, img: it.img || it.icon, name: it.name||'' });
+    saveItemBench(); renderItemBench();
+    return true;
+  }
+  function renderItemBench(){
+    if (!itemsBench) return;
+    itemsBench.innerHTML = '';
+    ITEM_BENCH.forEach((it, idx) => {
+      const node = document.createElement('div');
+      node.className = 'bench-item'; node.setAttribute('draggable','true');
+      node.dataset.index = String(idx); node.dataset.id = String(it.id);
+      node.title = it.name || '';
+      node.innerHTML = `
+        <img class="bench-item__img" alt="" src="${fullImg(it.img || it.icon)}">
+        <button type="button" class="bench-item__remove" aria-label="Retirer">×</button>
+      `;
+      node.addEventListener('dragstart', (e)=>{
+        node.classList.add('dragging');
+        const p = itemPayload(findItemById(it.id) || it);
+        e.dataTransfer?.setData(ITEM_MIME, JSON.stringify(p));
+        e.dataTransfer?.setData('text/plain', JSON.stringify({ __type:'item', id: it.id }));
+      });
+      node.addEventListener('dragend', ()=> node.classList.remove('dragging'));
+      node.querySelector('.bench-item__remove')?.addEventListener('click', ()=>{
+        ITEM_BENCH.splice(idx,1); saveItemBench(); renderItemBench();
+      });
+      itemsBench.appendChild(node);
+    });
+    saveItemBench();
+  }
+  // Tap/click on items bench to store currently selected item (mobile-friendly)
+  if (itemsBench) {
+    itemsBench.addEventListener('click', (e) => {
+      if (selection.type === 'item' && selection.data) {
+        const stored = addItemToBench(selection.data);
+        if (stored) clearSelection();
+      }
+    });
+  }
   // Items: only 4 proposals at a time (no full catalog view here)
 
   // Selection state for touch/mobile (and keyboard/mouse as a fallback to DnD)
@@ -56,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     board.classList.remove('is-placing', 'is-equipping');
     document.querySelectorAll('.tb-item.is-selected').forEach(b => b.classList.remove('is-selected'));
     if (hintEl && IS_TOUCH) hintEl.textContent = 'Place exactement 4 héroïnes.';
+  if (itemsBench) itemsBench.classList.remove('is-dropping');
   }
   function selectGirl(girl, el) {
     clearSelection();
@@ -69,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
     selection = { type: 'item', data: item, el };
     if (el) el.classList.add('is-selected');
     board.classList.add('is-equipping');
-    if (hintEl && IS_TOUCH) hintEl.textContent = 'Tape une héroïne sur le plateau pour lui attribuer l\'objet.';
+  if (hintEl && IS_TOUCH) hintEl.textContent = 'Tape une héroïne pour équiper, ou tape le banc d\'objets pour stocker.';
+  if (itemsBench) itemsBench.classList.add('is-dropping');
   }
 
   // helpers
@@ -118,6 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('dragstart', (e) => {
         btn.classList.add('dragging');
         e.dataTransfer.setData('text/plain', JSON.stringify({ __type: 'item', id: it.id }));
+        e.dataTransfer.setData(ITEM_MIME, JSON.stringify(itemPayload(it)));
         const tip = getDragTip();
         tip.textContent = `${it.name} → (dépose sur une héroïne)`;
         tip.style.display = 'block';
@@ -126,8 +211,27 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.remove('dragging');
         if (dragTip) dragTip.style.display = 'none';
       });
+      // Long-press on touch to add directly to items bench
+      let lpTimer = null;
+      const clearLp = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+      btn.addEventListener('touchstart', () => {
+        clearLp();
+        lpTimer = setTimeout(() => {
+          btn.dataset.longpress = '1';
+          const ok = addItemToBench(it);
+          if (ok && itemsBench) { itemsBench.classList.add('is-dropping'); setTimeout(()=> itemsBench.classList.remove('is-dropping'), 500); }
+        }, 450);
+      }, { passive: true });
+      btn.addEventListener('touchend', (ev) => {
+        // if a long-press was triggered, absorb the synthetic click
+        if (btn.dataset.longpress === '1') { ev.preventDefault(); ev.stopPropagation(); }
+        clearLp();
+      }, { passive: false });
+      btn.addEventListener('touchcancel', clearLp, { passive: true });
+      btn.addEventListener('touchmove', clearLp, { passive: true });
       // Tap to equip (mobile-friendly)
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        if (btn.dataset.longpress === '1') { e.preventDefault(); e.stopPropagation(); btn.dataset.longpress = '0'; return; }
         const already = btn.classList.contains('is-selected');
         if (already) { clearSelection(); return; }
         selectItem(it, btn);
@@ -293,22 +397,35 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderPick() {
   pickGrid.innerHTML = '';
   let pool = SUGGESTED.length ? [...SUGGESTED] : [...OWNED];
-  if (pool.length === 0) return;
+  if (pool.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'tb-items__empty';
+    empty.textContent = 'Aucune héroïne disponible pour le tirage.';
+    pickGrid.appendChild(empty);
+    return;
+  }
 
-  // on duplique si < 4
-  while (pool.length < 4) pool = pool.concat(pool);
-
-  // Exclure ceux déjà au banc (préservés) du tirage
-  const preservedIds = new Set(Array.from(inBench.keys()));
-  const pool2 = pool.filter(g => !preservedIds.has(g.id));
-
-  // Sélectionne jusqu'à 4 suggestions uniques parmi le pool restant
-  const picks = [];
-  const taken = new Set();
-  const target = Math.min(4, pool2.length);
-  while (picks.length < target && taken.size < pool2.length) {
-    const i = Math.floor(Math.random() * pool2.length);
-    if (!taken.has(i)) { taken.add(i); picks.push(pool2[i]); }
+  // If we already have picks cached for this seed, reuse them to be stable across refresh
+  let picks = loadPicks(CUR_SEED);
+  if (!Array.isArray(picks) || picks.length === 0) {
+    // Build deterministic picks based on incoming SUGGESTED from server (which already depends on seed)
+    // Exclure ceux déjà au banc (préservés) du tirage
+    const preservedIds = new Set(Array.from(inBench.keys()));
+    const pool2 = pool.filter(g => !preservedIds.has(g.id));
+    // on duplique si < 4
+    while (pool2.length < 4) pool2.push(...pool2);
+    picks = pool2.slice(0, 4);
+    // persist ids only
+    savePicks(CUR_SEED, picks.map(g => g.id));
+  } else if (typeof picks[0] !== 'object') {
+    // We stored ids: map back to objects from OWNED/SUGGESTED
+    const byId = new Map([...OWNED, ...SUGGESTED].map(g => [String(g.id), g]));
+    picks = picks.map(id => byId.get(String(id))).filter(Boolean);
+    // If mapping failed for some, fallback to first 4 available
+    if (picks.length < 4) {
+      const pool2 = pool.filter(g => !picks.some(p=> p.id===g.id));
+      while (picks.length < 4 && pool2.length) picks.push(pool2.shift());
+    }
   }
 
   picks.forEach(g => pickGrid.appendChild(renderCard(g, { source: 'pick' })));
@@ -440,10 +557,19 @@ function renderPick() {
   });
 
   // ---- DnD bench ----
-  benchGrid.addEventListener('dragover', (e) => e.preventDefault());
+  benchGrid.addEventListener('dragover', (e) => {
+    const types = e.dataTransfer?.types || [];
+    // Disallow items being dragged into the characters bench
+    if (types.includes(ITEM_MIME)) return; // don't make it a drop target for items
+    e.preventDefault();
+  });
   benchGrid.addEventListener('drop', (e) => {
     e.preventDefault();
-    const girl = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
+    // Block drop if payload is an item
+    let payload = {};
+    try { payload = JSON.parse(e.dataTransfer.getData('text/plain') || '{}'); } catch { payload = {}; }
+    if (payload && payload.__type === 'item') return;
+    const girl = payload;
 
     // retire du board si présente
     for (const [k, v] of placed) {
@@ -455,7 +581,8 @@ function renderPick() {
       }
     }
 
-    if (!inBench.has(girl.id)) {
+  if (!girl || girl.id == null) return;
+  if (!inBench.has(girl.id)) {
       const card = renderCard(girl, { source: 'bench' });
       benchGrid.appendChild(card);
       inBench.set(girl.id, card);
@@ -465,6 +592,46 @@ function renderPick() {
 
   // ---- Items drag & drop ----
   // Note: individual item buttons attach their own drag handlers in renderItems()
+
+  // Accept drops into items bench
+  if (itemsBench) {
+    itemsBench.addEventListener('dragover', (e)=>{
+      const types = e.dataTransfer?.types || [];
+      if (types.includes(ITEM_MIME) || types.includes('text/plain')) { e.preventDefault(); itemsBench.classList.add('is-dropping'); }
+    });
+    itemsBench.addEventListener('dragleave', ()=> itemsBench.classList.remove('is-dropping'));
+    itemsBench.addEventListener('drop', (e)=>{
+      itemsBench.classList.remove('is-dropping');
+      const dt = e.dataTransfer; if (!dt) return;
+      // from picker/bench
+      let it = null;
+      if (dt.types.includes(ITEM_MIME)) {
+        try { it = JSON.parse(dt.getData(ITEM_MIME)); } catch {}
+      }
+      if (!it) {
+        // Fallback from text/plain shape
+        try {
+          const p = JSON.parse(dt.getData('text/plain')||'{}');
+          if (p && p.__type==='item') it = itemPayload(findItemById(p.id)||{ id:p.id, img:`images/items/fc${p.id}.png`, name:'' });
+        } catch {}
+      }
+      if (!it || !it.id) return;
+      // avoid duplicates in bench
+      const exists = ITEM_BENCH.some(x => String(x.id) === String(it.id));
+      if (exists) {
+        const n = itemsBench.querySelector(`.bench-item[data-id="${String(it.id)}"]`);
+        if (n) {
+          n.classList.add('dragging');
+          setTimeout(()=> n.classList.remove('dragging'), 350);
+        }
+        return;
+      }
+      if (ITEM_BENCH.length >= BENCH_CAP) return;
+      // push
+      ITEM_BENCH.push({ id: it.id, img: it.icon || it.img, name: it.name||'' });
+      saveItemBench(); renderItemBench();
+    });
+  }
 
   board.addEventListener('drop', (e) => {
     // handle item drops onto chips
@@ -631,6 +798,7 @@ btnLock.addEventListener('click', async () => {
   renderPick();
   renderItems();
   renderBonuses();
+  renderItemBench();
 
   // --- Reroll limité à 3 ---
   let rerollsLeft = Number(window.REROLLS_LEFT ?? 3);
@@ -648,12 +816,17 @@ btnLock.addEventListener('click', async () => {
         rerollsLeft = Number(data?.left ?? rerollsLeft);
       } catch {}
       updateRerollUI();
-      // Clear any selection to avoid confusion after refreshing candidates/items
-      clearSelection();
-      renderPick(); // personnages
-      // also refresh the 4 item proposals
-      currentItems = choose4(ALL_ITEMS);
-      renderItems();
+      // Generate a new seed and navigate to it so server-side SUGGESTED changes accordingly
+      const newSeed = Math.floor(Math.random() * 2147483647) + 1;
+      // Clear picks cache so the next page uses the fresh seed
+      savePicks(newSeed, []);
+      // Keep item bench as-is; only the pick candidates change
+      const url = new URL(window.location.href);
+      url.searchParams.set('s', String(newSeed));
+      window.location.href = url.toString();
     });
   }
+
+  // When starting matchmaking, persist current lineup and also allow rerolls again on next visit by clearing picks
+  // (Server will also reset rerolls; see controller change)
 });

@@ -1,0 +1,97 @@
+@use '../base/variables' as v;
+
+.page-collection {
+  background-image: url(/public/images/backgrounds/Bg.png);
+  background-size: cover;
+  position: relative;
+
+  .container { width: min(1200px, 94%); margin-inline: auto; padding-bottom: 2rem;}
+
+  .mg-section-header {
+    text-align: center; color: v.$color-text; margin: 1.2rem 0 1rem;
+    h1 { font-family: v.$font-display, inherit; text-shadow: 0 2px 12px rgba(0,0,0,.45); }
+    p  { opacity: .9; }
+  }
+
+  .coll-filters { display: grid; gap: .6rem; justify-items: center; margin: .6rem 0 1rem; }
+  .coll-filter__search { width: min(420px, 92vw); padding: .6rem .8rem; border-radius: 12px; border:1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.56); color: rgb(85, 85, 85); }
+  .coll-filter__pills { display:flex; flex-wrap:wrap; gap:.4rem; justify-content:center; }
+  .pill { padding: .35rem .7rem; border-radius: 999px; border:1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.56); color: rgb(85, 85, 85); cursor:pointer; }
+  .pill.is-active { background: linear-gradient(90deg, v.$color-primary, v.$color-accent); color: #0a0512; border-color: transparent; }
+  .coll-filter__family { display:flex; align-items:center; gap:.45rem; color: v.$color-text; }
+  // Custom select
+  .coll-filter__family .select { position: relative; min-width: 200px; }
+  .coll-filter__family .select__button {
+    display:flex; align-items:center; justify-content:space-between; gap:.6rem;
+    width: 100%; padding:.5rem .7rem; border-radius: 10px; border:1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.56); color: rgb(85, 85, 85); cursor: pointer;
+  }
+  .coll-filter__family .select__chevron { opacity:.8; transition: transform .2s ease; }
+  .coll-filter__family .is-open .select__chevron { transform: rotate(180deg); }
+  .coll-filter__family .select__menu {
+    position:absolute; top: calc(100% + 6px); left:0; right:0; z-index: 10;
+    list-style:none; margin:0; padding:.4rem; border-radius: 10px;
+    border:1px solid rgba(255,255,255,.18);
+    background: rgba(18, 10, 32, .96); backdrop-filter: blur(6px);
+    max-height: 220px; overflow:auto; display:none;
+  }
+  .coll-filter__family .is-open .select__menu { display:block; }
+  .coll-filter__family .select__option {
+    padding:.4rem .6rem; border-radius: 8px; color: v.$color-text; cursor:pointer;
+  }
+  .coll-filter__family .select__option:hover { background: rgba(255,255,255,.08); }
+  .coll-filter__family .select__option.is-selected { background: linear-gradient(90deg, v.$color-primary, v.$color-accent); color: #0a0512; }
+
+  .coll-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: .8rem;
+  }
+
+  .coll-card {
+    display: flex; flex-direction: column; gap: .4rem;
+    padding: .5rem; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.06);
+    color: v.$color-text; cursor: pointer;
+    transition: transform .15s ease, box-shadow .2s ease, border-color .2s;
+    &:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,.25); border-color: rgba(v.$color-accent,.35); }
+  }
+  .coll-card__img { aspect-ratio: 4 / 3; display: grid; place-items: center;
+    background: radial-gradient(600px 300px at 40% 10%, rgba(v.$color-primary,.2), transparent);
+    img { max-width: 92%; max-height: 92%; object-fit: contain; }
+  }
+  .coll-card__name { font-weight: 800; text-align: center; }
+
+  /* Modal */
+  .coll-modal { position: fixed; inset: 0; display: none; z-index: 1000; }
+  .coll-modal.is-open { display: block; }
+  .coll-modal__veil { position: absolute; inset: 0; background: rgba(0,0,0,.5); }
+  .coll-modal__panel { position: relative; margin: 8vh auto 0; background: rgba(10,6,20,.9);
+    border: 1px solid rgba(255,255,255,.18); border-radius: 14px;
+    max-width: min(840px, 94vw); padding: 1rem; color: v.$color-text;
+    box-shadow: 0 24px 60px rgba(0,0,0,.35), inset 0 0 22px rgba(255,255,255,.08);
+  }
+  .coll-modal__close { position: absolute; right: .6rem; top: .6rem;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
+    border-radius: 8px; color: v.$color-text; width: 32px; height: 32px; cursor: pointer; }
+  .coll-modal__body { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .coll-modal__img { display: grid; place-items: center; border-radius: 12px; min-height: 240px;
+    background: radial-gradient(600px 300px at 40% 10%, rgba(v.$color-primary,.2), transparent);
+    img { max-width: 95%; max-height: 95%; object-fit: contain; }
+  }
+  .coll-modal__name { margin: .2rem 0 .6rem; }
+  .coll-modal__tags { display: flex; gap: .4rem; margin-bottom: .6rem; }
+
+  .tag { font-size: .8rem; padding: .2rem .5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); }
+  .tag-melee  { background: rgba(255,130,160,.2); border-color: rgba(255,130,160,.4); }
+  .tag-ranged { background: rgba(150,220,255,.2); border-color: rgba(150,220,255,.4); }
+  .tag-tank   { background: rgba(160,255,190,.2); border-color: rgba(160,255,190,.4); }
+  .tag-healer { background: rgba(220,160,255,.2); border-color: rgba(220,160,255,.4); }
+
+  .coll-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .4rem; }
+  .coll-stats li { display: flex; justify-content: space-between; padding: .35rem .6rem; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); }
+
+  @media (max-width: 720px) { .coll-modal__body { grid-template-columns: 1fr; } }
+}

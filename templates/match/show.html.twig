@@ -5,7 +5,7 @@
 
 {% block main %}
 <section class="match container">
-  <header class="match__header">
+  <div class="match__header">
     <h1>Match #{{ match_id }}</h1>
     <div class="match__controls">
       <button class="btn btn-primary" id="btn-start">▶ Démarrer</button>
@@ -13,7 +13,7 @@
         <button class="btn btn-ghost"   id="btn-reset">↺ Reset</button>
   <button class="btn btn-ghost"   id="btn-music" aria-pressed="false" title="Activer/Désactiver la musique">🎶 Musique</button>
     </div>
-  </header>
+  </div>
 
   <div class="match__layout">
     <aside class="hud hud--left">
